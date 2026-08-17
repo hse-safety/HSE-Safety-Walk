@@ -1,11 +1,11 @@
-UPLOAD ALL OF THESE TO THE ROOT OF YOUR GITHUB REPOSITORY:
+GITHUB OVERWRITE – HSE SAFETY WALK
 
-index.html
-manifest.webmanifest
-sw.js
-icon-192.png
-icon-512.png
-apple-touch-icon.png
-.nojekyll
+1. Open the existing GitHub repository.
+2. Upload ALL files from this package to the repository ROOT.
+3. Choose Replace/overwrite when GitHub reports that the files already exist.
+4. Commit the changes to main.
+5. Wait until GitHub Pages has redeployed.
+6. On iPhone, delete the OLD Home Screen shortcut once.
+7. Open the GitHub Pages URL in Safari and use Share > Add to Home Screen.
 
-README.md is optional for the website, but useful to keep in the repository.
+DO NOT rename index.html.
