@@ -1,6 +1,6 @@
-OVERWRITE THESE FILES IN THE ROOT OF YOUR GITHUB REPOSITORY:
-
+UPLOAD / OVERWRITE ALL FILES IN REPOSITORY ROOT:
 index.html
+app-v133.html   NEW
 manifest.webmanifest
 sw.js
 icon-192.png
@@ -9,6 +9,5 @@ apple-touch-icon.png
 .nojekyll
 README.md
 
-BUILD: v132
-
-After GitHub Pages has deployed, open the site on iPhone and press CLEAR ALL once.
+Then open on iPhone:
+https://meirum.github.io/HSE-Safety-Walk/app-v133.html?v=133
