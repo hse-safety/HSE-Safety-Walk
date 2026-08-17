@@ -1,4 +1,4 @@
-/* HSE Safety Walk v133 legacy-cache cleanup only. */
+/* HSE Safety Walk v134 legacy-cache cleanup only. */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
