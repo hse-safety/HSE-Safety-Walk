@@ -3,7 +3,7 @@
   "short_name": "SAFETY WALK",
   "description": "HSE Safety Walk inspection template",
   "id": "./app-v134.html",
-  "start_url": "./index.html?v=135",
+  "start_url": "./index.html?v=137",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef2f7",

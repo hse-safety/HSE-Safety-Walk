@@ -6410,9 +6410,36 @@ h1 {
                     if (match) {
                         const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
                         const englishDate = `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
-                        clone.type = 'text';
-                        clone.value = englishDate;
-                        clone.setAttribute('value', englishDate);
+
+                        /* v137 — PDF date fix.
+                           Chromium/Edge can omit the painted value of an input element
+                           when that element is serialised inside the SVG renderer used
+                           by the rolling PDF export. Render only the date as ordinary
+                           text inside an input-look box in the PDF clone. */
+                        const dateBox = document.createElement('div');
+                        dateBox.className = 'pdf-date-static';
+                        dateBox.textContent = englishDate;
+                        const style = getComputedStyle(source);
+                        const rect = source.getBoundingClientRect();
+                        dateBox.style.boxSizing = style.boxSizing || 'border-box';
+                        dateBox.style.width = '100%';
+                        dateBox.style.height = Math.max(1, Math.round(rect.height)) + 'px';
+                        dateBox.style.padding = style.padding;
+                        dateBox.style.border = style.border;
+                        dateBox.style.borderRadius = style.borderRadius;
+                        dateBox.style.background = style.backgroundColor || '#ffffff';
+                        dateBox.style.color = style.color || '#111827';
+                        dateBox.style.fontFamily = style.fontFamily;
+                        dateBox.style.fontSize = style.fontSize;
+                        dateBox.style.fontWeight = style.fontWeight;
+                        dateBox.style.lineHeight = style.lineHeight;
+                        dateBox.style.letterSpacing = style.letterSpacing;
+                        dateBox.style.display = 'flex';
+                        dateBox.style.alignItems = 'center';
+                        dateBox.style.whiteSpace = 'nowrap';
+                        dateBox.style.overflow = 'hidden';
+                        clone.replaceWith(dateBox);
+                        return;
                     }
                 }
                 if (source.type === 'checkbox' || source.type === 'radio') {
