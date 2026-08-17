@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- HSE Safety Walk iPhone/GitHub AirDrop version 2026-08-17 -->
+<!-- HSE Safety Walk iPhone/GitHub AirDrop + persistent autosave version 2026-08-17 -->
 
 <html lang="da"><head>
 <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
@@ -5333,6 +5333,182 @@ h1 {
     const printPdfBtn = null; // PDF removed in iPhone/GitHub version
     const airDropBtn = document.getElementById('airDropBtn');
 
+
+    /* ==========================================================
+       iPhone persistent draft autosave
+       Keeps the current Safety Walk (text, checks, dynamic cards and
+       embedded photos) in IndexedDB across app/Safari closes.
+       The saved draft is only cleared by the Clear all button.
+       ========================================================== */
+    const AUTOSAVE_DB_NAME = 'HSE-Safety-Walk-Draft';
+    const AUTOSAVE_STORE_NAME = 'drafts';
+    const AUTOSAVE_KEY = 'current';
+    let autosaveTimer = null;
+    let autosaveReady = false;
+    let suppressAutosaveUntil = 0;
+
+    function openAutosaveDb() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(AUTOSAVE_DB_NAME, 1);
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains(AUTOSAVE_STORE_NAME)) {
+                    db.createObjectStore(AUTOSAVE_STORE_NAME);
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error || new Error('Autosave database could not be opened'));
+        });
+    }
+
+    function getStaticAutosaveFields() {
+        return [...document.querySelectorAll('#hseDoc input, #hseDoc textarea, #hseDoc select')].filter(field =>
+            !field.closest('#observationsList, #manualObservationsList, #bestPracticeList')
+        );
+    }
+
+    function captureAutosaveState() {
+        const staticFields = getStaticAutosaveFields().map(field => ({
+            tag: field.tagName,
+            type: field instanceof HTMLInputElement ? field.type : '',
+            value: field.value,
+            checked: field instanceof HTMLInputElement ? field.checked : undefined
+        }));
+
+        const questionPhotos = [...document.querySelectorAll('#itemsContainer .photo-slot')].map(slot => {
+            const img = slot.querySelector('img');
+            return img ? img.src : null;
+        });
+
+        return {
+            version: 1,
+            savedAt: Date.now(),
+            staticFields,
+            questionPhotos,
+            observationsHtml: observationsList?.innerHTML || '',
+            manualObservationsHtml: manualObservationsList?.innerHTML || '',
+            bestPracticeHtml: bestPracticeList?.innerHTML || '',
+            manualObservationSerial,
+            bestPracticeSerial
+        };
+    }
+
+    async function saveDraftNow() {
+        if (!autosaveReady || Date.now() < suppressAutosaveUntil) return;
+        try {
+            const db = await openAutosaveDb();
+            const tx = db.transaction(AUTOSAVE_STORE_NAME, 'readwrite');
+            tx.objectStore(AUTOSAVE_STORE_NAME).put(captureAutosaveState(), AUTOSAVE_KEY);
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error || new Error('Autosave transaction aborted'));
+            });
+            db.close();
+        } catch (error) {
+            console.warn('Safety Walk autosave failed', error);
+        }
+    }
+
+    function scheduleAutosave(delay = 250) {
+        if (!autosaveReady || Date.now() < suppressAutosaveUntil) return;
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(saveDraftNow, delay);
+    }
+
+    async function readSavedDraft() {
+        try {
+            const db = await openAutosaveDb();
+            const tx = db.transaction(AUTOSAVE_STORE_NAME, 'readonly');
+            const request = tx.objectStore(AUTOSAVE_STORE_NAME).get(AUTOSAVE_KEY);
+            const result = await new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error);
+            });
+            db.close();
+            return result;
+        } catch (error) {
+            console.warn('Safety Walk restore failed', error);
+            return null;
+        }
+    }
+
+    async function clearSavedDraft() {
+        clearTimeout(autosaveTimer);
+        suppressAutosaveUntil = Date.now() + 1000;
+        try {
+            const db = await openAutosaveDb();
+            const tx = db.transaction(AUTOSAVE_STORE_NAME, 'readwrite');
+            tx.objectStore(AUTOSAVE_STORE_NAME).delete(AUTOSAVE_KEY);
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error || new Error('Clear autosave transaction aborted'));
+            });
+            db.close();
+        } catch (error) {
+            console.warn('Could not clear saved Safety Walk draft', error);
+        }
+    }
+
+    async function restoreSavedDraft() {
+        const state = await readSavedDraft();
+        if (!state) return;
+
+        const staticFields = getStaticAutosaveFields();
+        (state.staticFields || []).forEach((saved, index) => {
+            const field = staticFields[index];
+            if (!field) return;
+            if (field instanceof HTMLInputElement && (field.type === 'checkbox' || field.type === 'radio')) {
+                field.checked = !!saved.checked;
+            } else {
+                field.value = saved.value ?? '';
+            }
+        });
+
+        if (observationsList && typeof state.observationsHtml === 'string') observationsList.innerHTML = state.observationsHtml;
+        if (manualObservationsList && typeof state.manualObservationsHtml === 'string') manualObservationsList.innerHTML = state.manualObservationsHtml;
+        if (bestPracticeList && typeof state.bestPracticeHtml === 'string') bestPracticeList.innerHTML = state.bestPracticeHtml;
+        manualObservationSerial = Number(state.manualObservationSerial) || 0;
+        bestPracticeSerial = Number(state.bestPracticeSerial) || 0;
+
+        const questionSlots = [...document.querySelectorAll('#itemsContainer .photo-slot')];
+        (state.questionPhotos || []).forEach((src, index) => {
+            if (src && questionSlots[index]) setSlotPhoto(questionSlots[index], src);
+        });
+
+        document.querySelectorAll('.photo-slot').forEach(slot => {
+            const existingSrc = slot.querySelector('img')?.src || null;
+            slot.removeAttribute('data-photo-init');
+            if (existingSrc) {
+                slot.querySelector('.photo-link, img')?.remove();
+                slot.classList.remove('has-image');
+                setSlotPhoto(slot, existingSrc);
+            }
+            initializePhotoSlot(slot);
+        });
+        document.querySelectorAll('.photo-grid').forEach(updatePhotoGridState);
+        updateObservations();
+        updateBestPracticeSection();
+    }
+
+    function startPersistentAutosave() {
+        autosaveReady = true;
+        document.addEventListener('input', () => scheduleAutosave(), true);
+        document.addEventListener('change', () => scheduleAutosave(), true);
+
+        const root = document.getElementById('hseDoc');
+        if (root) {
+            const observer = new MutationObserver(() => scheduleAutosave());
+            observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveDraftNow();
+        });
+        window.addEventListener('pagehide', () => saveDraftNow());
+    }
+
     let manualObservationSerial = Math.max(0, ...[...document.querySelectorAll('#manualObservationsList .observation-card[data-index^="manual-"]')].map(card => Number((card.dataset.index || '').split('-').pop()) || 0));
     let bestPracticeSerial = Math.max(0, ...[...document.querySelectorAll('#bestPracticeList .best-practice-card[data-index^="best-practice-"]')].map(card => Number((card.dataset.index || '').split('-').pop()) || 0));
 
@@ -5364,6 +5540,7 @@ h1 {
         const placeholder = slot.querySelector('.placeholder-text');
         if (placeholder) placeholder.style.removeProperty('display');
         updatePhotoGridState(slot.closest('.photo-grid'));
+        scheduleAutosave();
     }
 
     function ensureDeleteButton(slot) {
@@ -5409,6 +5586,7 @@ h1 {
         slot.classList.add('has-image');
         ensureDeleteButton(slot);
         updatePhotoGridState(slot.closest('.photo-grid'));
+        scheduleAutosave();
     }
 
     function compressImage(file) {
@@ -5855,6 +6033,7 @@ h1 {
 
         updateObservations();
         updateBestPracticeSection();
+        clearSavedDraft();
     };
 
     clearPhotosBtn?.addEventListener('click', window.resetAllPhotos);
@@ -6743,6 +6922,11 @@ h1 {
             airDropBtn.textContent = originalText;
         }
     }
+
+
+    restoreSavedDraft().finally(() => {
+        startPersistentAutosave();
+    });
 
     airDropBtn?.addEventListener('click', shareHtmlViaAirDrop);
 

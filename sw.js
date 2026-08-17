@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hse-safety-walk-airdrop-v3';
+const CACHE_NAME = 'hse-safety-walk-airdrop-autosave-v4';
 const APP_SHELL = [
   './',
   './index.html',
