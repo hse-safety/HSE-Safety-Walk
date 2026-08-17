@@ -6405,6 +6405,16 @@ h1 {
             if (source instanceof HTMLInputElement) {
                 clone.value = source.value;
                 clone.setAttribute('value', source.value);
+                if (source.type === 'date' && source.value) {
+                    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(source.value);
+                    if (match) {
+                        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                        const englishDate = `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
+                        clone.type = 'text';
+                        clone.value = englishDate;
+                        clone.setAttribute('value', englishDate);
+                    }
+                }
                 if (source.type === 'checkbox' || source.type === 'radio') {
                     clone.checked = source.checked;
                     source.checked ? clone.setAttribute('checked', '') : clone.removeAttribute('checked');
