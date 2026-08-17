@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>HSE Safety Walk</title>
-<meta name="hse-build" content="2026-08-17-v131">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=6">
-<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=6">
-<link rel="manifest" href="./manifest.webmanifest?v=6">
+<meta name="hse-build" content="2026-08-17-v132">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=132">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=132">
+<link rel="manifest" href="./manifest.webmanifest?v=132">
 <meta name="theme-color" content="#008c78">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4296,7 +4296,7 @@ h1 {
 <div class="meta-item meta-supervisor"><label>SUPERVISOR OR FOREMAN</label><input placeholder="Name" type="text" value=""></div>
 <div class="meta-item meta-kam"><label>KAM OR PROJECT MANAGER</label><input placeholder="Name" type="text" value=""></div>
 <div class="meta-item meta-site"><label>SITE &amp; PROJECT NO.</label><input placeholder="Site / project no." type="text" value=""></div>
-<div class="meta-item meta-date"><label>DATE</label><input id="inspectionDate" placeholder="Date" type="date" value="2026-08-17"></div>
+<div class="meta-item meta-date"><label>DATE</label><input id="inspectionDate" placeholder="Date" type="date"></div>
 
 
 <div class="meta-item meta-performed"><label>PERFORMED BY</label><input placeholder="Name" type="text" value=""></div>
@@ -5481,6 +5481,7 @@ h1 {
     let autosaveTimer = null;
     let autosaveReady = false;
     let suppressAutosaveUntil = 0;
+    let clearGeneration = 0; // prevents an in-flight restore from repopulating a cleared form
 
     function openAutosaveDb() {
         return new Promise((resolve, reject) => {
@@ -5570,11 +5571,14 @@ h1 {
 
     async function clearSavedDraft() {
         clearTimeout(autosaveTimer);
-        suppressAutosaveUntil = Date.now() + 1000;
+        suppressAutosaveUntil = Date.now() + 5000;
+
+        // First clear the entire object store, not just one key. This also removes
+        // stale data written by older Safety Walk versions.
         try {
             const db = await openAutosaveDb();
             const tx = db.transaction(AUTOSAVE_STORE_NAME, 'readwrite');
-            tx.objectStore(AUTOSAVE_STORE_NAME).delete(AUTOSAVE_KEY);
+            tx.objectStore(AUTOSAVE_STORE_NAME).clear();
             await new Promise((resolve, reject) => {
                 tx.oncomplete = resolve;
                 tx.onerror = () => reject(tx.error);
@@ -5582,13 +5586,29 @@ h1 {
             });
             db.close();
         } catch (error) {
-            console.warn('Could not clear saved Safety Walk draft', error);
+            console.warn('Could not clear saved Safety Walk draft store', error);
+        }
+
+        // Then remove the complete Safety Walk IndexedDB database. If Safari has
+        // retained an old database schema or photo state, it cannot reappear later.
+        try {
+            await new Promise(resolve => {
+                const request = indexedDB.deleteDatabase(AUTOSAVE_DB_NAME);
+                request.onsuccess = resolve;
+                request.onerror = resolve;
+                request.onblocked = resolve;
+            });
+        } catch (error) {
+            console.warn('Could not delete old Safety Walk database', error);
         }
     }
 
     async function restoreSavedDraft() {
+        const restoreGeneration = clearGeneration;
         const state = await readSavedDraft();
-        if (!state) return;
+        // If Clear all was pressed while IndexedDB was being read, never restore
+        // the old result into the newly cleared template.
+        if (!state || restoreGeneration !== clearGeneration) return;
 
         const staticFields = getStaticAutosaveFields();
         (state.staticFields || []).forEach((saved, index) => {
@@ -5908,7 +5928,8 @@ h1 {
             const questionHeading = item.querySelector('.question-title')?.textContent.trim() || '';
             activeIndexes.add(index);
 
-            let card = observationsList.querySelector(`.observation-card[data-index="${CSS.escape(index)}"]`);
+            let card = [...observationsList.querySelectorAll('.observation-card')]
+                .find(candidate => candidate.dataset.index === index);
             if (!card) {
                 card = createObservationCard(index, questionHeading);
                 observationsList.appendChild(card);
@@ -6031,23 +6052,38 @@ h1 {
         updateBestPracticeSection();
     });
 
-    manualObsBtn?.addEventListener('click', () => {
+    function addManualObservation() {
         if (!manualObservationsList) return;
         manualObservationSerial += 1;
         const card = createObservationCard(`manual-${manualObservationSerial}`, '', { removable: true, manual: true });
         manualObservationsList.appendChild(card);
         updateObservations();
-        card.querySelector('.observation-title')?.focus();
-    });
+        scheduleAutosave();
+        requestAnimationFrame(() => {
+            card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            setTimeout(() => card.querySelector('.observation-title')?.focus(), 120);
+        });
+    }
 
-    bestPracticeBtn?.addEventListener('click', () => {
+    function addBestPractice() {
         if (!bestPracticeList) return;
         bestPracticeSerial += 1;
         const card = createBestPracticeCard(`best-practice-${bestPracticeSerial}`);
         bestPracticeList.appendChild(card);
         updateBestPracticeSection();
-        card.querySelector('.best-practice-title')?.focus();
-    });
+        scheduleAutosave();
+        requestAnimationFrame(() => {
+            card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            setTimeout(() => card.querySelector('.best-practice-title')?.focus(), 120);
+        });
+    }
+
+    // Use direct onclick properties for maximum iPhone/PWA reliability and expose
+    // the actions for diagnostics. One tap can only create one card.
+    if (manualObsBtn) manualObsBtn.onclick = addManualObservation;
+    if (bestPracticeBtn) bestPracticeBtn.onclick = addBestPractice;
+    window.addManualObservation = addManualObservation;
+    window.addBestPractice = addBestPractice;
 
     function closeTimePickers(except = null) {
         timePickerWraps.forEach(wrap => {
@@ -6130,49 +6166,99 @@ h1 {
     updateObservations();
     updateBestPracticeSection();
 
-    window.resetAllPhotos = () => {
+    function completelyClearPhotoSlot(slot) {
+        if (!slot) return;
+        slot.querySelectorAll('.photo-link, img, canvas').forEach(node => node.remove());
+        slot.classList.remove('has-image', 'dragover');
+        slot.removeAttribute('data-pdf-width');
+        slot.removeAttribute('data-pdf-height');
+        ['width','height','min-width','max-width','min-height','max-height','aspect-ratio','display','align-items','justify-content','overflow']
+            .forEach(property => slot.style.removeProperty(property));
+        const placeholder = slot.querySelector('.placeholder-text');
+        if (placeholder) {
+            placeholder.style.removeProperty('display');
+            placeholder.style.removeProperty('visibility');
+            placeholder.style.removeProperty('opacity');
+        }
+    }
+
+    window.resetAllPhotos = async () => {
         if (!confirm('Are you sure you want to remove all photos?')) return;
-        document.querySelectorAll('.photo-slot').forEach(slot => {
-            slot.querySelector('.photo-link, img')?.remove();
-            slot.classList.remove('has-image');
-        });
+        clearTimeout(autosaveTimer);
+        suppressAutosaveUntil = Date.now() + 2000;
+        document.querySelectorAll('.photo-slot').forEach(completelyClearPhotoSlot);
         document.querySelectorAll('.photo-grid').forEach(updatePhotoGridState);
+        suppressAutosaveUntil = 0;
+        await saveDraftNow();
     };
 
-    window.clearEntireTemplate = () => {
+    window.clearEntireTemplate = async () => {
         if (!confirm('Are you sure you want to clear the entire template?')) return;
+
+        // Invalidate any asynchronous restore that may still be running.
+        clearGeneration += 1;
+        clearTimeout(autosaveTimer);
+        suppressAutosaveUntil = Date.now() + 5000;
 
         closeTimePickers();
         closeLightbox();
 
-        document.querySelectorAll('#hseDoc input[type="text"], #hseDoc input[type="date"], #hseDoc input[type="time"], #hseDoc textarea').forEach(field => {
-            field.value = '';
+        // Clear both live form properties and serialised HTML attributes so a later
+        // AirDrop snapshot cannot contain old text/check marks from the prior report.
+        document.querySelectorAll('#hseDoc input, #hseDoc textarea, #hseDoc select').forEach(field => {
             delete field.dataset.autoHeading;
             delete field.dataset.autoImmediateAction;
+
+            if (field instanceof HTMLInputElement) {
+                if (field.type === 'checkbox' || field.type === 'radio') {
+                    field.checked = false;
+                    field.removeAttribute('checked');
+                } else {
+                    field.value = '';
+                    field.removeAttribute('value');
+                }
+            } else if (field instanceof HTMLTextAreaElement) {
+                field.value = '';
+                field.textContent = '';
+            } else if (field instanceof HTMLSelectElement) {
+                field.selectedIndex = 0;
+                [...field.options].forEach((option, index) => {
+                    option.selected = index === 0;
+                    if (index === 0) option.setAttribute('selected', '');
+                    else option.removeAttribute('selected');
+                });
+            }
         });
 
-        document.querySelectorAll('#hseDoc input[type="checkbox"]').forEach(box => {
-            box.checked = false;
-        });
-
-        document.querySelectorAll('.photo-slot').forEach(slot => {
-            slot.querySelector('.photo-link, img')?.remove();
-            slot.classList.remove('has-image');
-        });
+        // Remove every rendered/photo export object, including data-URL images from
+        // question cards, manual observations and Best Practice cards.
+        document.querySelectorAll('.photo-slot').forEach(completelyClearPhotoSlot);
         document.querySelectorAll('.photo-grid').forEach(updatePhotoGridState);
 
+        // Dynamic content must be physically removed from the HTML DOM.
+        observationsList?.replaceChildren();
         manualObservationsList?.replaceChildren();
         bestPracticeList?.replaceChildren();
         manualObservationSerial = 0;
         bestPracticeSerial = 0;
 
+        document.getElementById('printShell')?.replaceChildren();
+        if (lightboxImage) lightboxImage.removeAttribute('src');
+
         updateObservations();
         updateBestPracticeSection();
-        clearSavedDraft();
+
+        // Hard-delete all previous Safety Walk persistent data, including old photos.
+        await clearSavedDraft();
+
+        // Store one known-clean blank snapshot. Reopening the home-screen app must
+        // therefore restore a blank form, never the previous report.
+        suppressAutosaveUntil = 0;
+        await saveDraftNow();
     };
 
-    clearPhotosBtn?.addEventListener('click', window.resetAllPhotos);
-    clearAllBtn?.addEventListener('click', window.clearEntireTemplate);
+    if (clearPhotosBtn) clearPhotosBtn.onclick = window.resetAllPhotos;
+    if (clearAllBtn) clearAllBtn.onclick = window.clearEntireTemplate;
 
     function syncCloneFormState(sourceRoot, cloneRoot) {
         const sourceFields = sourceRoot.querySelectorAll('input, textarea, select');
@@ -7078,7 +7164,7 @@ h1 {
 </script>
 
 <script>
-/* v131 — clear legacy PWA caches/service workers after this version loads. */
+/* v132 — clear legacy PWA caches/service workers after this version loads. */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
@@ -7090,7 +7176,9 @@ if ('serviceWorker' in navigator) {
         try {
             if ('caches' in window) {
                 const keys = await caches.keys();
-                await Promise.all(keys.map(key => caches.delete(key)));
+                await Promise.all(keys
+                    .filter(key => /hse[-_ ]?safety[-_ ]?walk/i.test(key))
+                    .map(key => caches.delete(key)));
             }
         } catch (error) {
             console.warn('Legacy cache cleanup failed:', error);
