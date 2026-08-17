@@ -1,0 +1,11 @@
+UPLOAD ALL OF THESE TO THE ROOT OF YOUR GITHUB REPOSITORY:
+
+index.html
+manifest.webmanifest
+sw.js
+icon-192.png
+icon-512.png
+apple-touch-icon.png
+.nojekyll
+
+README.md is optional for the website, but useful to keep in the repository.
