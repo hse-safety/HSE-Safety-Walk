@@ -1,0 +1,15 @@
+HSE Safety Walk v143 — GitHub overwrite package
+
+This package uses the EXACT icon supplied by the user:
+ICON(2).png
+
+The artwork itself is unchanged. It has only been resized to:
+- apple-touch-icon.png (180x180)
+- icon-192.png (192x192)
+- icon-512.png (512x512)
+
+All Safety Walk functionality is unchanged from v142/v140.
+Only icon files and cache/build version were updated.
+
+Upload all files in this ZIP to the ROOT of the existing GitHub repository
+and replace/overwrite files with the same names.
