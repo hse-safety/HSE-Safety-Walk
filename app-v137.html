@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>HSE Safety Walk</title>
-<meta name="hse-build" content="2026-08-17-v134">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=134">
-<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=134">
-<link rel="manifest" href="./manifest.webmanifest?v=134">
+<meta name="hse-build" content="2026-08-19-v139">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=139">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=139">
+<link rel="manifest" href="./manifest.webmanifest?v=139">
 <meta name="theme-color" content="#008c78">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -4315,6 +4315,83 @@ h1 {
     }
 }
 </style>
+
+<style id="v139MobileMoreMenu">
+/* ==========================================================
+   v139 — PLATFORM-SAFE COMPACT iPHONE ACTION BAR
+   iPhone/iPad: Add OBS | Add Best | SEND | More (…)
+   Clear all is available inside More. Mac/Windows keep the
+   normal desktop Clear all + PDF controls, regardless of window width.
+   ========================================================== */
+.footer-actions {
+    position: fixed;
+}
+#moreActionsBtn,
+.mobile-more-menu {
+    display: none;
+}
+
+html.apple-mobile-ui #clearAllBtn {
+    display: none !important;
+}
+html.apple-mobile-ui #moreActionsBtn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    letter-spacing: 1px;
+    background: #667085;
+    color: #ffffff;
+    border: 1px solid #667085;
+}
+html.apple-mobile-ui #moreActionsBtn:active {
+    background: #4f5968;
+    border-color: #4f5968;
+}
+html.apple-mobile-ui .mobile-more-menu {
+    position: absolute;
+    right: 4px;
+    bottom: calc(100% + 7px);
+    z-index: 980;
+    width: min(250px, calc(100vw - 16px));
+    padding: 6px;
+    border: 1px solid #d6deea;
+    border-radius: 9px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(12, 35, 64, 0.24);
+}
+html.apple-mobile-ui .mobile-more-menu[hidden] {
+    display: none !important;
+}
+html.apple-mobile-ui .mobile-more-menu:not([hidden]) {
+    display: block !important;
+}
+html.apple-mobile-ui .mobile-more-menu button {
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 9px 12px !important;
+    border-radius: 6px !important;
+    border: 1px solid #d0d7e2 !important;
+    background: #ffffff !important;
+    color: #b42318 !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
+    white-space: normal !important;
+}
+html.apple-mobile-ui .mobile-more-menu button:active {
+    background: #fff1f0 !important;
+}
+
+@media print {
+    #moreActionsBtn,
+    .mobile-more-menu {
+        display: none !important;
+    }
+}
+</style>
 </head>
 <body>
 <div aria-hidden="true" class="print-repeat-header">
@@ -5437,7 +5514,11 @@ h1 {
 <button class="btn-obs" id="manualObsBtn" type="button">Add OBS</button>
 <button class="btn-best-practice" id="bestPracticeBtn" type="button">Add Best</button>
 <button class="btn-clear-all" id="clearAllBtn" type="button">Clear all</button>
-<button class="btn-print" id="outputActionBtn" type="button">AirDrop</button>
+<button class="btn-print" id="outputActionBtn" type="button">SEND</button>
+<button aria-controls="mobileMoreMenu" aria-expanded="false" aria-label="More actions" class="btn-more" id="moreActionsBtn" type="button">⋯</button>
+<div aria-label="More actions" class="mobile-more-menu" id="mobileMoreMenu" role="menu" hidden>
+<button id="mobileClearAllBtn" role="menuitem" type="button">Clear all inspection data</button>
+</div>
 </div>
 <section aria-labelledby="overallConclusionHeading" class="overall-conclusion-page">
 <div class="conclusion-header">
@@ -5460,7 +5541,7 @@ h1 {
 <script>
 (() => {
     'use strict';
-    document.documentElement.dataset.hseBuild = 'v134';
+    document.documentElement.dataset.hseBuild = 'v139';
 
     const IMAGE_MAX_DIMENSION = 620;
     const IMAGE_QUALITY = 0.36;
@@ -5486,6 +5567,9 @@ h1 {
     const bestPracticeBtn = document.getElementById('bestPracticeBtn');
     const clearPhotosBtn = document.getElementById('clearPhotosBtn');
     const clearAllBtn = document.getElementById('clearAllBtn');
+    const moreActionsBtn = document.getElementById('moreActionsBtn');
+    const mobileMoreMenu = document.getElementById('mobileMoreMenu');
+    const mobileClearAllBtn = document.getElementById('mobileClearAllBtn');
     /* One output button, two roles:
        - iPhone/iPad: AirDrop/share completed standalone HTML
        - Mac/desktop: create the compressed rolling PDF
@@ -5494,14 +5578,15 @@ h1 {
     const outputActionBtn = document.getElementById('outputActionBtn');
     const isAppleMobile = /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    document.documentElement.classList.toggle('apple-mobile-ui', isAppleMobile);
     const airDropBtn = isAppleMobile ? outputActionBtn : null;
     const printPdfBtn = isAppleMobile ? null : outputActionBtn;
 
     if (outputActionBtn) {
         outputActionBtn.disabled = false;
-        outputActionBtn.textContent = isAppleMobile ? 'AirDrop' : 'PDF';
+        outputActionBtn.textContent = isAppleMobile ? 'SEND' : 'PDF';
         outputActionBtn.setAttribute('aria-label', isAppleMobile
-            ? 'Share completed HSE Safety Walk via AirDrop'
+            ? 'Share completed HSE Safety Walk HTML'
             : 'Create compressed PDF');
     }
 
@@ -5509,6 +5594,28 @@ h1 {
         if (manualObsBtn) manualObsBtn.textContent = 'Add OBS';
         if (bestPracticeBtn) bestPracticeBtn.textContent = 'Add Best';
     }
+
+    function closeMobileMoreMenu() {
+        if (!mobileMoreMenu || !moreActionsBtn) return;
+        mobileMoreMenu.hidden = true;
+        moreActionsBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleMobileMoreMenu(event) {
+        event?.preventDefault();
+        event?.stopPropagation();
+        if (!mobileMoreMenu || !moreActionsBtn) return;
+        const shouldOpen = mobileMoreMenu.hidden;
+        mobileMoreMenu.hidden = !shouldOpen;
+        moreActionsBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
+    moreActionsBtn?.addEventListener('click', toggleMobileMoreMenu);
+    mobileMoreMenu?.addEventListener('click', event => event.stopPropagation());
+    document.addEventListener('click', closeMobileMoreMenu);
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMobileMoreMenu();
+    });
 
 
     /* ==========================================================
@@ -5546,6 +5653,16 @@ h1 {
         );
     }
 
+    function captureAutosaveContainerHtml(container) {
+        if (!container) return '';
+        const clone = container.cloneNode(true);
+        // innerHTML alone does not contain the live values typed into dynamic
+        // OBS / Best Practice inputs and textareas. Synchronise the live form
+        // state into a clone before serialising so iPhone restore is lossless.
+        syncStandaloneSnapshotState(container, clone);
+        return clone.innerHTML;
+    }
+
     function captureAutosaveState() {
         const staticFields = getStaticAutosaveFields().map(field => ({
             tag: field.tagName,
@@ -5564,9 +5681,9 @@ h1 {
             savedAt: Date.now(),
             staticFields,
             questionPhotos,
-            observationsHtml: observationsList?.innerHTML || '',
-            manualObservationsHtml: manualObservationsList?.innerHTML || '',
-            bestPracticeHtml: bestPracticeList?.innerHTML || '',
+            observationsHtml: captureAutosaveContainerHtml(observationsList),
+            manualObservationsHtml: captureAutosaveContainerHtml(manualObservationsList),
+            bestPracticeHtml: captureAutosaveContainerHtml(bestPracticeList),
             manualObservationSerial,
             bestPracticeSerial
         };
@@ -6313,6 +6430,12 @@ h1 {
 
     if (clearPhotosBtn) clearPhotosBtn.onclick = window.resetAllPhotos;
     if (clearAllBtn) clearAllBtn.onclick = window.clearEntireTemplate;
+    if (mobileClearAllBtn) {
+        mobileClearAllBtn.onclick = async () => {
+            closeMobileMoreMenu();
+            await window.clearEntireTemplate();
+        };
+    }
 
     function syncCloneFormState(sourceRoot, cloneRoot) {
         const sourceFields = sourceRoot.querySelectorAll('input, textarea, select');
@@ -7146,6 +7269,7 @@ h1 {
     function buildStandaloneHtmlSnapshot() {
         closeTimePickers();
         closeLightbox();
+        closeMobileMoreMenu();
         updateObservations();
         updateBestPracticeSection();
 
@@ -7193,7 +7317,7 @@ h1 {
         // Build synchronously while the tap still counts as a user gesture in Safari.
         const htmlText = buildStandaloneHtmlSnapshot();
         const fileName = buildAirDropFileName();
-        const originalText = airDropBtn.textContent || 'AirDrop';
+        const originalText = airDropBtn.textContent || 'SEND';
         airDropBtn.disabled = true;
         airDropBtn.textContent = 'Preparing…';
 
@@ -7212,7 +7336,7 @@ h1 {
             }
 
             if (canShareFile) {
-                airDropBtn.textContent = 'Choose AirDrop…';
+                airDropBtn.textContent = 'Choose…';
                 await navigator.share({
                     title: 'HSE Safety Walk',
                     files: [shareFile]
@@ -7221,13 +7345,13 @@ h1 {
             }
 
             fallbackDownloadHtml(fileName, htmlText);
-            alert('The completed HTML file has been created. If the iPhone share sheet did not open, open the downloaded file in Files and use Share → AirDrop.');
+            alert('The completed HTML file has been created. If the iPhone share sheet did not open, open the downloaded file in Files and use Share.');
         } catch (error) {
             if (error?.name !== 'AbortError') {
-                console.error('AirDrop/share error', error);
+                console.error('Share error', error);
                 try {
                     fallbackDownloadHtml(fileName, htmlText);
-                    alert('AirDrop could not be opened directly. The completed HTML file has been downloaded instead; share it from Files using AirDrop.');
+                    alert('The share sheet could not be opened directly. The completed HTML file has been downloaded instead; share it from Files.');
                 } catch (fallbackError) {
                     console.error('HTML fallback download error', fallbackError);
                     alert('The HTML file could not be shared. Please try again in Safari.');
