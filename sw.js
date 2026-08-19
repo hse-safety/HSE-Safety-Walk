@@ -1,10 +1,71 @@
-/* HSE Safety Walk v134 legacy-cache cleanup only. */
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    try { const keys = await caches.keys(); await Promise.all(keys.filter(k => /hse[-_ ]?safety[-_ ]?walk/i.test(k)).map(k => caches.delete(k))); } catch (_) {}
-    try { await self.registration.unregister(); } catch (_) {}
-    try { const clients = await self.clients.matchAll({type:'window', includeUncontrolled:true}); for (const client of clients) client.navigate(client.url); } catch (_) {}
-  })());
+const CACHE_NAME = 'hse-safety-walk-v140';
+const APP_SHELL = [
+  './',
+  './index.html',
+  './app-v137.html',
+  './manifest.webmanifest?v=140',
+  './icon-192.png?v=140',
+  './icon-512.png?v=140',
+  './apple-touch-icon.png?v=140'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
-self.addEventListener('fetch', () => {});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys
+          .filter(key => /^hse-safety-walk-/i.test(key) && key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(new Request(request, { cache: 'no-store' }))
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request, { ignoreSearch: true });
+          return cached || caches.match('./index.html');
+        })
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request, { ignoreSearch: true }).then(cached => {
+      const network = fetch(new Request(request, { cache: 'no-store' }))
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      return cached || network;
+    })
+  );
+});
