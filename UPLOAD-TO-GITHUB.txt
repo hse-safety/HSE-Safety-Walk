@@ -1,14 +1,26 @@
-HSE Safety Walk v144 — GitHub overwrite package
+HSE Safety Walk v145 — GitHub overwrite package
 
-This version keeps the app functionality and changes the iPhone Home Screen icon
-so it matches the screenshot more closely:
-- dark/black app tile background
-- supplied green circular people icon centred on the tile
-- Home Screen title set to SAFETY WALK
+What is new:
+- New full-screen iPhone welcome page for Safety Walk 1.0
+- Premium dark teal background and supplied Safety Walk artwork
+- The visible “Start Template” button opens the existing Safety Walk template
+- Existing template functionality is kept in app-v137.html
+- Existing iPhone Home Screen icon and title SAFETY WALK are retained
 
-Upload all files in this ZIP to the ROOT of the existing GitHub repository
+Upload ALL files from this ZIP to the ROOT of the existing GitHub repository
 and overwrite files with the same names.
 
+Files in the package:
+- index.html                = new welcome/start page
+- safety-walk-cover.png     = welcome page artwork
+- app-v137.html             = existing working Safety Walk template
+- manifest.webmanifest      = iPhone/PWA settings
+- sw.js                     = app-shell cache file
+- icon-192.png
+- icon-512.png
+- apple-touch-icon.png
+
 Important on iPhone:
-If the old icon or old label remains, delete the existing Home Screen shortcut and
-add it again from Safari. iPhone often keeps the old icon/title for an already-added shortcut.
+After GitHub Pages has updated, fully close Safari and reopen the Safety Walk.
+If the old Home Screen icon or an old cached page remains, delete the existing
+Home Screen shortcut and add it again from Safari.
