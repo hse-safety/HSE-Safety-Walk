@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#157d3a">
+<title>HSE Safety Walk – Secure Login</title>
+<style>
+:root{--green:#157d3a;--gd:#0c5d2a;--soft:#eef8f1;--ink:#142131;--mut:#687787;--line:#d9e2e6;--bg:#eef3f0;--red:#b42318;--amber:#9a5b00}
+*{box-sizing:border-box} html,body{margin:0;min-height:100%;font-family:Arial,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+body{display:grid;place-items:center;padding:22px}
+.shell{width:min(1220px,100%);min-height:760px;background:#fff;border-radius:30px;overflow:hidden;box-shadow:0 24px 68px rgba(17,46,32,.16);display:grid;grid-template-columns:minmax(430px,.92fr) minmax(540px,1.08fr)}
+.visual{position:relative;padding:30px;background:linear-gradient(155deg,#0c5929,#147b39 55%,#1b9748);color:#fff;display:flex;flex-direction:column;overflow:hidden}
+.brand{display:flex;align-items:center;gap:13px} .icon{width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.16);display:grid;place-items:center;overflow:hidden} .icon img{width:54px;height:54px}
+.brand h1{font-size:32px;margin:0} .brand p{font-size:14px;margin:5px 0 0;opacity:.9}
+.cover{margin:28px 0 22px;padding:15px;border-radius:24px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.20)} .cover img{display:block;width:100%;height:410px;object-fit:cover;border-radius:18px;background:#fff}
+.fallback{display:none;height:410px;border-radius:18px;background:linear-gradient(#fff,#f2faf4);color:#173526;align-items:center;justify-content:center;flex-direction:column;text-align:center} .fallback.show{display:flex}
+.vfoot{margin-top:auto;display:grid;gap:11px;font-size:13px;line-height:1.45} .vrow{display:flex;gap:10px} .dot{width:9px;height:9px;background:#b8efc8;border-radius:50%;margin-top:5px}
+.panel{padding:34px 42px 28px;display:flex;flex-direction:column} .chip{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;padding:9px 13px;border-radius:999px;background:var(--soft);color:var(--gd);font-size:12px;font-weight:800;margin-bottom:18px} .chip i{width:8px;height:8px;background:#25a657;border-radius:50%}
+.head{border:1px solid var(--line);border-radius:22px;padding:20px 22px;margin-bottom:20px;background:linear-gradient(#fafcfb,#f3f8f4)} .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--green);margin-bottom:7px} .head h2{font-size:34px;margin:0 0 8px} .head p{margin:0;color:var(--mut);font-size:15px;line-height:1.55}
+.card{display:none} .card.active{display:block} .box{border:1px solid var(--line);border-radius:20px;padding:20px;background:#fff}
+label{display:block;font-size:13px;font-weight:800;margin:14px 0 7px} input{width:100%;height:50px;border:1px solid var(--line);border-radius:13px;padding:0 14px;font-size:15px;outline:none} input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(21,125,58,.12)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px} button{border:0;border-radius:13px;height:48px;padding:0 18px;font-size:14px;font-weight:800;cursor:pointer} .primary{background:var(--green);color:#fff;min-width:205px} .secondary{background:#f6f8f7;color:var(--ink);border:1px solid var(--line)} .danger{background:#fff1ef;color:var(--red);border:1px solid #f0c1bb} .warning{background:#fff7e9;color:var(--amber);border:1px solid #f0d6a7}
+.status{min-height:21px;margin-top:12px;font-size:13px;font-weight:700;color:var(--red)} .status.ok{color:var(--gd)} .info{margin-top:14px;border:1px solid #cfe5d5;background:#f2faf4;border-radius:13px;padding:12px 13px;font-size:12px;color:#3f5e4c}
+.session{display:none;margin:0 0 18px;border:1px solid #cde3d3;background:#f4faf5;border-radius:15px;padding:12px 14px;align-items:center;justify-content:space-between;gap:12px} .session.show{display:flex} .session strong{font-size:13px} .session span{font-size:12px;color:var(--mut);display:block;margin-top:2px} .session button{height:34px}
+.userlist{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:14px 0} .user{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line)} .user:last-child{border-bottom:0} .user.disabled{background:#fafafa;opacity:.65} .user small{display:block;color:var(--mut);margin-top:3px} .actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end} .actions button{height:32px;padding:0 9px;font-size:11px}
+.note{margin-top:auto;border-top:1px solid var(--line);padding-top:16px;color:var(--mut);font-size:11px;line-height:1.5} hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+@media(max-width:980px){body{padding:0;background:#fff}.shell{grid-template-columns:1fr;border-radius:0;min-height:100vh}.visual{padding:24px}.cover img,.fallback{height:300px}.panel{padding:26px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="visual">
+  <div class="brand"><div class="icon"><img src="./apple-touch-icon.png" alt="" onerror="this.style.display='none'"></div><div><h1>HSE Safety Walk</h1><p>Central user login · Supabase</p></div></div>
+  <div class="cover"><img id="cover" src="./safety-walk-cover.png" alt="Safety Walk" onerror="coverFallback()"><div id="fallback" class="fallback"><h2>SAFETY WALK</h2><p>Observér · Reflektér · Forbedr</p></div></div>
+  <div class="vfoot"><div class="vrow"><span class="dot"></span><span>Central brugerlogin på PC, Mac og iPhone.</span></div><div class="vrow"><span class="dot"></span><span>Administrator ser seneste login og antal logins.</span></div><div class="vrow"><span class="dot"></span><span>Kun aktive brugere får adgang.</span></div></div>
+</aside>
+<main class="panel">
+  <div class="chip"><i></i> Supabase connected</div>
+  <div id="session" class="session"><div><strong id="sessionName"></strong><span id="sessionRole"></span></div><button id="logout" class="secondary">Log ud</button></div>
+  <div class="head"><div id="eyebrow" class="eyebrow">Sikker adgang</div><h2 id="title">Log ind</h2><p id="desc">Log ind med den bruger og adgangskode, som administratoren har oprettet.</p></div>
+
+  <section id="loginCard" class="card active"><div class="box">
+    <label for="email">E-mail / brugernavn</label><input id="email" type="email" autocomplete="username" placeholder="navn@firma.dk">
+    <label for="password">Adgangskode</label><input id="password" type="password" autocomplete="current-password" placeholder="Indtast adgangskode">
+    <div class="row"><button id="login" class="primary">Log ind</button></div><div id="loginStatus" class="status"></div>
+  </div></section>
+
+  <section id="readyCard" class="card"><div class="box">
+    <div class="eyebrow">Godkendt bruger</div><h3 style="font-size:25px;margin:0 0 8px">Safety Walk er klar</h3><p style="margin:0;color:var(--mut)">Din bruger er aktiv og godkendt.</p>
+    <div class="row"><button id="startApp" class="primary">Start Safety Walk</button><button id="adminBtn" class="secondary" style="display:none">Brugere</button></div><div id="readyStatus" class="status"></div>
+  </div></section>
+
+  <section id="adminCard" class="card"><div class="box">
+    <div class="eyebrow">Administrator</div><h3 style="font-size:24px;margin:0 0 6px">Brugeradministration</h3>
+    <div id="adminStatus" class="status"></div><div id="userList" class="userlist"></div><hr>
+    <div class="eyebrow">Opret ny bruger</div>
+    <label for="newName">Navn</label><input id="newName" placeholder="Peter Jensen">
+    <label for="newEmail">E-mail</label><input id="newEmail" type="email" placeholder="peter@firma.dk">
+    <label for="newPassword">Midlertidig adgangskode</label><input id="newPassword" type="password" placeholder="Mindst 8 tegn">
+    <div class="row"><button id="createUser" class="primary">Opret bruger</button><button id="back" class="secondary">Tilbage</button></div>
+  </div><div class="info">Password vises ikke igen efter oprettelsen.</div></section>
+
+  <div class="note"><strong>Test v2.0:</strong> Central login er aktiv, men din nuværende <code>app-v137.html</code> er stadig direkte offentlig i GitHub og kan teknisk åbnes uden login. Det lukker vi efter testen.</div>
+</main></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
+const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
+const APP_URL='./app-v137.html';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id); let currentProfile=null;
+
+window.coverFallback=()=>{$('cover').style.display='none';$('fallback').classList.add('show')};
+function status(id,msg,ok=false){const e=$(id);e.textContent=msg||'';e.className='status'+(ok?' ok':'')}
+function fmt(ts){if(!ts)return'Aldrig';try{return new Intl.DateTimeFormat('da-DK',{dateStyle:'short',timeStyle:'short'}).format(new Date(ts))}catch{return ts}}
+function show(id){['loginCard','readyCard','adminCard'].forEach(x=>$(x).classList.toggle('active',x===id));
+ if(id==='loginCard'){$('eyebrow').textContent='Sikker adgang';$('title').textContent='Log ind';$('desc').textContent='Log ind med den bruger og adgangskode, som administratoren har oprettet.'}
+ if(id==='readyCard'){$('eyebrow').textContent='Safety Walk 1.0';$('title').textContent='Velkommen';$('desc').textContent='Din bruger er godkendt. Safety Walk er klar til brug.'}
+ if(id==='adminCard'){$('eyebrow').textContent='Administration';$('title').textContent='Brugere';$('desc').textContent='Opret og administrér autoriserede Safety Walk-brugere.'}}
+function updateSession(){const s=$('session');if(currentProfile){$('sessionName').textContent=currentProfile.display_name||currentProfile.email;$('sessionRole').textContent=currentProfile.role==='admin'?'Administrator':'Bruger';s.classList.add('show');$('adminBtn').style.display=currentProfile.role==='admin'?'inline-block':'none'}else{s.classList.remove('show');$('adminBtn').style.display='none'}}
+
+async function loadOwnProfile(record=false){const {data:{user}}=await supabase.auth.getUser();if(!user)return null;
+ const {data:profile,error}=await supabase.from('profiles').select('id,email,display_name,role,active,last_login_at,login_count').eq('id',user.id).single();
+ if(error)throw error;if(!profile.active){await supabase.auth.signOut();throw new Error('Din bruger er deaktiveret. Kontakt administrator.')}
+ if(record){const {error:rpcError}=await supabase.rpc('record_login');if(rpcError)throw rpcError;
+  const {data:r}=await supabase.from('profiles').select('id,email,display_name,role,active,last_login_at,login_count').eq('id',user.id).single();return r||profile}
+ return profile}
+
+$('login').onclick=async()=>{status('loginStatus','');const email=$('email').value.trim(),password=$('password').value;if(!email||!password){status('loginStatus','Indtast e-mail og adgangskode.');return}
+ $('login').disabled=true;status('loginStatus','Kontrollerer login…',true);try{const {error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;currentProfile=await loadOwnProfile(true);$('password').value='';updateSession();show('readyCard')}catch(err){await supabase.auth.signOut();currentProfile=null;updateSession();status('loginStatus',err.message||'Login mislykkedes.')}finally{$('login').disabled=false}};
+$('logout').onclick=async()=>{await supabase.auth.signOut();currentProfile=null;updateSession();show('loginCard')};
+$('startApp').onclick=()=>{status('readyStatus','Åbner Safety Walk…',true);window.location.href=APP_URL};
+$('adminBtn').onclick=async()=>{if(currentProfile?.role!=='admin')return;show('adminCard');await refreshUsers()};
+$('back').onclick=()=>show('readyCard');
+
+async function refreshUsers(){status('adminStatus','Henter brugere…',true);const {data,error}=await supabase.from('profiles').select('id,email,display_name,role,active,last_login_at,login_count,created_at').order('last_login_at',{ascending:false,nullsFirst:false});if(error){status('adminStatus',error.message);return}renderUsers(data||[]);status('adminStatus',(data||[]).length+' bruger(e) fundet.',true)}
+function renderUsers(users){const box=$('userList');box.innerHTML='';for(const u of users){const row=document.createElement('div');row.className='user'+(u.active?'':' disabled');const info=document.createElement('div');info.innerHTML='<strong>'+esc(u.display_name||u.email)+'</strong><small>'+esc(u.email)+' · '+(u.role==='admin'?'Administrator':'Bruger')+(u.active?'':' · Deaktiveret')+'</small><small><b>Seneste login:</b> '+esc(fmt(u.last_login_at))+'</small><small><b>Antal logins:</b> '+Number(u.login_count||0)+'</small>';const acts=document.createElement('div');acts.className='actions';
+ if(u.role!=='admin'){const t=document.createElement('button');t.className=u.active?'warning':'secondary';t.textContent=u.active?'Deaktivér':'Aktivér';t.onclick=()=>adminAction({action:'set_active',user_id:u.id,active:!u.active},refreshUsers);acts.appendChild(t);
+ const p=document.createElement('button');p.className='secondary';p.textContent='Nyt password';p.onclick=()=>{const np=prompt('Nyt password (mindst 8 tegn):');if(np===null)return;if(np.length<8){alert('Password skal være mindst 8 tegn.');return}adminAction({action:'reset_password',user_id:u.id,password:np},()=>alert('Password er ændret.'))};acts.appendChild(p);
+ const d=document.createElement('button');d.className='danger';d.textContent='Slet';d.onclick=()=>{if(confirm('Slet '+(u.display_name||u.email)+' permanent?'))adminAction({action:'delete',user_id:u.id},refreshUsers)};acts.appendChild(d)}
+ row.appendChild(info);row.appendChild(acts);box.appendChild(row)}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function adminAction(body,success){status('adminStatus','Arbejder…',true);const {data,error}=await supabase.functions.invoke('admin-users',{body});if(error){status('adminStatus',error.message||'Edge Function fejlede.');return}if(data?.error){status('adminStatus',data.error);return}status('adminStatus',data?.message||'Udført.',true);if(success)await success(data)}
+$('createUser').onclick=async()=>{const display_name=$('newName').value.trim(),email=$('newEmail').value.trim().toLowerCase(),password=$('newPassword').value;if(!display_name||!email||password.length<8){status('adminStatus','Udfyld navn og e-mail. Password skal være mindst 8 tegn.');return}await adminAction({action:'create',display_name,email,password},async()=>{$('newName').value='';$('newEmail').value='';$('newPassword').value='';await refreshUsers()})};
+
+async function boot(){const {data:{session}}=await supabase.auth.getSession();if(!session){show('loginCard');return}try{currentProfile=await loadOwnProfile(false);updateSession();show('readyCard')}catch{await supabase.auth.signOut();currentProfile=null;updateSession();show('loginCard')}} boot();
+</script>
+</body></html>
