@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06110f">
-<title>HSE Safety Walk – Login</title>
+<title>SAFETY WALK 1.0 – Login</title>
 <style>
 :root{
   --green:#12843b;
@@ -160,22 +160,82 @@ button{
 .admin input{height:54px;font-size:16px}
 .admin label{font-size:15px}
 hr{border:0;border-top:1px solid var(--line);margin:28px 0}
+
+.mobile-brand-title{display:none}
+
 @media(max-width:900px){
-  body{padding:0;background:#fff}
-  .shell{grid-template-columns:1fr;border-radius:0;min-height:100vh;border:0}
-  .visual{min-height:48vh}
-  .visual img{height:48vh}
-  .panel{min-height:52vh;padding:34px 28px;justify-content:flex-start}
-  .login-title{font-size:42px;margin-bottom:28px}
-  input{height:60px}
-  .ready h2{font-size:34px}
+  html,body{min-height:100%;background:#020909}
+  body{display:block;padding:0;min-height:100svh}
+  .shell{
+    position:relative;display:block;width:100%;min-height:100svh;
+    border:0;border-radius:0;box-shadow:none;overflow:hidden;background:#020909
+  }
+  .visual{
+    position:absolute;inset:0;z-index:0;min-height:100svh;height:100svh;background:#020909
+  }
+  .visual::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(to bottom,rgba(0,0,0,.02) 0%,rgba(0,0,0,.04) 38%,rgba(0,0,0,.22) 58%,rgba(0,0,0,.56) 100%);
+    pointer-events:none
+  }
+  .visual img{
+    width:100%;height:100%;object-fit:cover;object-position:center top;display:block
+  }
+  .panel{
+    position:relative;z-index:2;min-height:100svh;
+    padding:max(40svh,315px) 14px calc(20px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;justify-content:flex-start;background:transparent
+  }
+  .mobile-brand-title{
+    display:block;width:100%;max-width:520px;margin:0 auto 12px;text-align:center;
+    color:#fff;font-size:30px;line-height:1;font-weight:900;letter-spacing:.02em;
+    text-shadow:0 2px 12px rgba(0,0,0,.55)
+  }
+  #loginCard{
+    width:100%;max-width:520px;margin:0 auto;padding:22px 18px 18px;border-radius:24px;
+    background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.80);
+    box-shadow:0 18px 48px rgba(0,0,0,.30);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+  }
+  .login-title{margin:0 0 22px;font-size:34px;line-height:1;text-align:center;letter-spacing:-.5px}
+  .field{margin-bottom:17px}
+  label{margin-bottom:8px;font-size:15px}
+  input{height:56px;border-radius:13px;font-size:16px;background:#fff}
+  button{min-height:54px;border-radius:13px;font-size:17px}
+  .status{margin-top:10px;min-height:20px;font-size:14px}
+  .session{
+    width:100%;max-width:560px;margin:0 auto 12px;padding:12px 14px;
+    border:1px solid rgba(255,255,255,.78);border-radius:16px;background:rgba(255,255,255,.96);
+    box-shadow:0 10px 30px rgba(0,0,0,.20)
+  }
+  .ready,.admin{
+    width:100%;max-width:560px;margin:0 auto;padding:22px 18px;border-radius:22px;
+    background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.82);
+    box-shadow:0 18px 48px rgba(0,0,0,.28)
+  }
+  .ready h2{font-size:30px}
+  .ready p{font-size:16px}
+  .ready .primary{width:100%;min-width:0}
+  .ready .row{display:grid;grid-template-columns:1fr;gap:10px}
+  .admin h2{font-size:30px}
 }
+
 @media(max-width:560px){
-  .visual{min-height:43vh}
-  .visual img{height:43vh}
-  .panel{min-height:57vh;padding:28px 20px}
-  .login-title{font-size:38px}
+  .panel{padding-top:max(38svh,285px);padding-left:12px;padding-right:12px}
+  .mobile-brand-title{font-size:27px;margin-bottom:10px}
+  #loginCard{padding:20px 16px 16px;border-radius:22px}
+  .login-title{font-size:32px}
 }
+
+@media(max-height:720px) and (max-width:900px){
+  .panel{padding-top:max(31svh,220px)}
+  .mobile-brand-title{font-size:24px;margin-bottom:8px}
+  #loginCard{padding-top:16px;padding-bottom:14px}
+  .login-title{font-size:28px;margin-bottom:16px}
+  input{height:50px}
+  button{min-height:50px}
+}
+
 </style>
 </head>
 <body>
@@ -193,6 +253,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
       <button id="logout" class="secondary">Log ud</button>
     </div>
 
+    <div class="mobile-brand-title">SAFETY WALK 1.0</div>
     <section id="loginCard" class="card active">
       <h1 class="login-title">Log ind</h1>
 
