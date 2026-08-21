@@ -439,19 +439,14 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
 const APP_BUCKET='safety-app', APP_FILE='app-v137.html';
 
-if (!window.supabase || !window.supabase.createClient) {
-  const msg = document.getElementById('loginStatus');
-  if (msg) msg.textContent = 'Kunne ikke indlæse login-systemet. Åbn siden fra GitHub Pages i Safari og prøv igen.';
-  throw new Error('Supabase library was not loaded');
-}
-
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 let currentProfile=null;
 
