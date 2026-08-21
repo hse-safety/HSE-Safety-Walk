@@ -68,7 +68,7 @@ label{display:block;font-size:13px;font-weight:800;margin:14px 0 7px} input{widt
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
-const APP_URL='./app-v137.html';
+const APP_BUCKET='safety-app', APP_FILE='app-v137.html';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id); let currentProfile=null;
 
@@ -91,7 +91,7 @@ async function loadOwnProfile(record=false){const {data:{user}}=await supabase.a
 $('login').onclick=async()=>{status('loginStatus','');const email=$('email').value.trim(),password=$('password').value;if(!email||!password){status('loginStatus','Indtast e-mail og adgangskode.');return}
  $('login').disabled=true;status('loginStatus','Kontrollerer login…',true);try{const {error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;currentProfile=await loadOwnProfile(true);$('password').value='';updateSession();show('readyCard')}catch(err){await supabase.auth.signOut();currentProfile=null;updateSession();status('loginStatus',err.message||'Login mislykkedes.')}finally{$('login').disabled=false}};
 $('logout').onclick=async()=>{await supabase.auth.signOut();currentProfile=null;updateSession();show('loginCard')};
-$('startApp').onclick=()=>{status('readyStatus','Åbner Safety Walk…',true);window.location.href=APP_URL};
+$('startApp').onclick=async()=>{status('readyStatus','Åbner Safety Walk...',true);const {data,error}=await supabase.storage.from(APP_BUCKET).createSignedUrl(APP_FILE,60);if(error){status('readyStatus','Kunne ikke åbne Safety Walk: '+error.message);return;}window.location.href=data.signedUrl;};
 $('adminBtn').onclick=async()=>{if(currentProfile?.role!=='admin')return;show('adminCard');await refreshUsers()};
 $('back').onclick=()=>show('readyCard');
 
