@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#06110f">
+<meta name="theme-color" content="#00131f">
 <title>SAFETY WALK 1.0 – Login</title>
 <style>
 :root{
@@ -161,55 +161,127 @@ button{
 .admin label{font-size:15px}
 hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
-.mobile-brand-title{display:none}
+.login-view{display:contents}
+.login-view:not(.active){display:none}
+.mobile-brand,.mobile-help{display:none}
+.field-icon,.eye-toggle{display:none}
 
 @media(max-width:900px){
-  html,body{min-height:100%;background:#020909}
-  body{display:block;padding:0;min-height:100svh}
+  html,body{width:100%;min-height:100%;background:#00131f}
+  body{display:block;padding:0;min-height:100svh;overflow-x:hidden}
   .shell{
     position:relative;display:block;width:100%;min-height:100svh;
-    border:0;border-radius:0;box-shadow:none;overflow:hidden;background:#020909
+    border:0;border-radius:0;box-shadow:none;overflow:hidden;background:#00131f
   }
   .visual{
-    position:absolute;inset:0;z-index:0;min-height:100svh;height:100svh;background:#020909
+    position:fixed;inset:0;z-index:0;min-height:100svh;height:100svh;overflow:hidden;
+    background:
+      radial-gradient(circle at -8% -4%,transparent 0 18%,rgba(0,190,210,.20) 18.1% 18.35%,transparent 18.5% 23.5%,rgba(0,190,210,.18) 23.6% 23.85%,transparent 24% 29%,rgba(0,190,210,.15) 29.1% 29.35%,transparent 29.5% 35%,rgba(0,190,210,.11) 35.1% 35.35%,transparent 35.5%),
+      radial-gradient(circle at 111% 101%,transparent 0 26%,rgba(0,190,210,.18) 26.1% 26.35%,transparent 26.5% 32%,rgba(0,190,210,.15) 32.1% 32.35%,transparent 32.5% 38%,rgba(0,190,210,.12) 38.1% 38.35%,transparent 38.5% 44%,rgba(0,190,210,.09) 44.1% 44.35%,transparent 44.5%),
+      linear-gradient(155deg,#00111d 0%,#001827 48%,#00111c 100%)
   }
   .visual::after{
-    content:"";position:absolute;inset:0;
-    background:linear-gradient(to bottom,rgba(0,0,0,.02) 0%,rgba(0,0,0,.04) 38%,rgba(0,0,0,.22) 58%,rgba(0,0,0,.56) 100%);
-    pointer-events:none
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 50% 35%,rgba(12,49,66,.17),transparent 48%),linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.15))
   }
-  .visual img{
-    width:100%;height:100%;object-fit:cover;object-position:center top;display:block
-  }
+  .visual img{display:none}
+
   .panel{
-    position:relative;z-index:2;min-height:100svh;
-    padding:max(40svh,315px) 14px calc(20px + env(safe-area-inset-bottom));
-    display:flex;flex-direction:column;justify-content:flex-start;background:transparent
+    position:relative;z-index:2;width:100%;min-height:100svh;padding:0;
+    display:block;background:transparent
   }
+
+  .login-view.active{
+    width:100%;min-height:100svh;
+    display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+    padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 12px)
+  }
+
+  .mobile-brand{
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding-top:clamp(36px,6.5svh,66px)
+  }
+  .mobile-logo{
+    width:58px;height:58px;margin:0 auto 22px;opacity:.82;filter:drop-shadow(0 1px 8px rgba(0,0,0,.35))
+  }
+  .mobile-logo svg{display:block;width:100%;height:100%;overflow:visible}
   .mobile-brand-title{
-    display:block;width:100%;max-width:520px;margin:0 auto 12px;text-align:center;
-    color:#fff;font-size:30px;line-height:1;font-weight:900;letter-spacing:.02em;
-    text-shadow:0 2px 12px rgba(0,0,0,.55)
+    display:block;width:100%;margin:0;text-align:center;white-space:nowrap;
+    color:rgba(245,247,249,.84);font-size:clamp(34px,9.2vw,44px);line-height:.98;
+    font-weight:900;letter-spacing:-.035em;text-shadow:0 2px 12px rgba(0,0,0,.42)
   }
+
   #loginCard{
-    width:100%;max-width:520px;margin:0 auto;padding:22px 18px 18px;border-radius:24px;
-    background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.80);
-    box-shadow:0 18px 48px rgba(0,0,0,.30);
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+    align-self:center;justify-self:center;width:min(92vw,620px);margin:12px auto;
+    padding:30px 24px 26px;border-radius:24px;
+    background:rgba(1,20,33,.50);border:1px solid rgba(0,190,205,.65);
+    box-shadow:0 20px 60px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.025);
+    backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:#f3f5f6
   }
-  .login-title{margin:0 0 22px;font-size:34px;line-height:1;text-align:center;letter-spacing:-.5px}
-  .field{margin-bottom:17px}
-  label{margin-bottom:8px;font-size:15px}
-  input{height:56px;border-radius:13px;font-size:16px;background:#fff}
-  button{min-height:54px;border-radius:13px;font-size:17px}
-  .status{margin-top:10px;min-height:20px;font-size:14px}
+  .login-title{
+    position:relative;margin:0 0 38px;padding-bottom:18px;text-align:center;
+    color:rgba(248,249,250,.96);font-size:32px;line-height:1;font-weight:800;
+    letter-spacing:.015em;text-transform:uppercase
+  }
+  .login-title::after{
+    content:"";position:absolute;left:50%;bottom:0;width:54px;height:3px;
+    border-radius:99px;transform:translateX(-50%);background:#10b7b9;opacity:.90
+  }
+  #loginCard .field{margin-bottom:28px}
+  #loginCard label{
+    margin:0 0 11px;color:rgba(247,248,249,.92);font-size:16px;font-weight:800;
+    letter-spacing:.01em;text-transform:uppercase
+  }
+  #loginCard .input-wrap{position:relative}
+  #loginCard input{
+    width:100%;height:64px;border:1px solid rgba(174,190,198,.28);border-radius:14px;
+    padding:0 56px 0 58px;color:#f5f7f8;font-size:17px;background:rgba(0,7,15,.22);
+    box-shadow:none
+  }
+  #loginCard input::placeholder{color:rgba(229,234,237,.50);opacity:1}
+  #loginCard input:focus{
+    border-color:rgba(18,132,59,.95);box-shadow:0 0 0 3px rgba(18,132,59,.13);background:rgba(0,12,20,.34)
+  }
+  .field-icon{
+    display:flex;position:absolute;left:18px;top:50%;width:24px;height:24px;
+    transform:translateY(-50%);align-items:center;justify-content:center;color:#0fc4c8;pointer-events:none
+  }
+  .field-icon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .eye-toggle{
+    display:flex;position:absolute;right:11px;top:50%;width:44px;height:44px;min-height:44px;padding:0;
+    transform:translateY(-50%);align-items:center;justify-content:center;border:0;border-radius:50%;
+    color:rgba(250,250,250,.92);background:transparent;cursor:pointer
+  }
+  .eye-toggle svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .eye-toggle:focus-visible{outline:2px solid rgba(18,132,59,.8);outline-offset:1px}
+
+  #loginCard .primary{
+    width:100%;min-height:64px;margin-top:2px;border-radius:14px;
+    background:linear-gradient(180deg,#14964d 0%,#0b7839 100%);color:#fff;
+    box-shadow:0 10px 25px rgba(3,82,38,.20);font-size:18px;font-weight:850;
+    letter-spacing:.035em;text-transform:uppercase
+  }
+  #loginCard .primary:active{transform:translateY(1px)}
+  #loginCard .status{margin-top:9px;min-height:18px;font-size:13px;color:#ffb3ad;text-align:center}
+  #loginCard .status.ok{color:#7fd99b}
+
+  .mobile-help{
+    display:flex;align-self:end;justify-self:center;align-items:center;justify-content:center;
+    gap:10px;width:100%;padding:8px 0 0;color:rgba(238,241,243,.58);
+    font-size:13px;font-weight:650;letter-spacing:.005em;text-transform:uppercase;white-space:nowrap
+  }
+  .mobile-help-icon{
+    display:grid;place-items:center;width:32px;height:32px;border:1.5px solid rgba(238,241,243,.58);
+    border-radius:50%;font-size:20px;line-height:1;color:rgba(238,241,243,.66)
+  }
+
   .session{
-    width:100%;max-width:560px;margin:0 auto 12px;padding:12px 14px;
+    width:calc(100% - 24px);max-width:560px;margin:12px auto;padding:12px 14px;
     border:1px solid rgba(255,255,255,.78);border-radius:16px;background:rgba(255,255,255,.96);
     box-shadow:0 10px 30px rgba(0,0,0,.20)
   }
   .ready,.admin{
-    width:100%;max-width:560px;margin:0 auto;padding:22px 18px;border-radius:22px;
+    width:calc(100% - 24px);max-width:560px;margin:110px auto 24px;padding:22px 18px;border-radius:22px;
     background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.82);
     box-shadow:0 18px 48px rgba(0,0,0,.28)
   }
@@ -220,22 +292,35 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   .admin h2{font-size:30px}
 }
 
-@media(max-width:560px){
-  .panel{padding-top:max(38svh,285px);padding-left:12px;padding-right:12px}
-  .mobile-brand-title{font-size:27px;margin-bottom:10px}
-  #loginCard{padding:20px 16px 16px;border-radius:22px}
-  .login-title{font-size:32px}
+@media(max-width:430px){
+  .login-view.active{padding-left:14px;padding-right:14px}
+  .mobile-brand{padding-top:clamp(32px,5.8svh,54px)}
+  .mobile-logo{width:52px;height:52px;margin-bottom:20px}
+  .mobile-brand-title{font-size:clamp(32px,9.2vw,40px)}
+  #loginCard{width:100%;padding:27px 20px 23px;border-radius:22px}
+  .login-title{font-size:30px;margin-bottom:32px}
+  #loginCard .field{margin-bottom:24px}
+  #loginCard input{height:60px;font-size:16px}
+  #loginCard .primary{min-height:60px}
+  .mobile-help{font-size:12px;gap:9px}
+  .mobile-help-icon{width:30px;height:30px;font-size:18px}
 }
 
-@media(max-height:720px) and (max-width:900px){
-  .panel{padding-top:max(31svh,220px)}
-  .mobile-brand-title{font-size:24px;margin-bottom:8px}
-  #loginCard{padding-top:16px;padding-bottom:14px}
-  .login-title{font-size:28px;margin-bottom:16px}
-  input{height:50px}
-  button{min-height:50px}
+@media(max-height:740px) and (max-width:900px){
+  .login-view.active{padding-top:calc(env(safe-area-inset-top) + 8px);padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+  .mobile-brand{padding-top:18px}
+  .mobile-logo{width:44px;height:44px;margin-bottom:13px}
+  .mobile-brand-title{font-size:30px}
+  #loginCard{padding:20px 18px 17px;margin:7px auto;border-radius:20px}
+  .login-title{font-size:27px;margin-bottom:22px;padding-bottom:14px}
+  #loginCard .field{margin-bottom:17px}
+  #loginCard label{font-size:14px;margin-bottom:7px}
+  #loginCard input{height:52px;font-size:15px}
+  #loginCard .primary{min-height:52px;font-size:16px}
+  #loginCard .status{min-height:14px;margin-top:6px}
+  .mobile-help{font-size:11px;padding-top:4px}
+  .mobile-help-icon{width:27px;height:27px;font-size:16px}
 }
-
 </style>
 </head>
 <body>
@@ -253,27 +338,68 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
       <button id="logout" class="secondary">Log ud</button>
     </div>
 
-    <div class="mobile-brand-title">SAFETY WALK 1.0</div>
-    <section id="loginCard" class="card active">
-      <h1 class="login-title">Log ind</h1>
-
-      <div class="field">
-        <label for="email">E-mail / brugernavn</label>
-        <div class="input-wrap">
-          <input id="email" type="email" autocomplete="username" placeholder="Indtast e-mail eller brugernavn">
+    <div id="loginView" class="login-view active">
+      <div class="mobile-brand" aria-hidden="true">
+        <div class="mobile-logo">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Compass rose">
+            <defs>
+              <path id="logoTopArc" d="M 16 61 A 44 44 0 0 1 104 61"/>
+              <path id="logoBottomArc" d="M 14 67 A 46 46 0 0 0 106 67"/>
+            </defs>
+            <g fill="none" stroke="rgba(242,244,246,.82)" stroke-width="1.5">
+              <circle cx="60" cy="60" r="27" opacity=".7"/>
+              <circle cx="60" cy="60" r="19" opacity=".38"/>
+              <path d="M60 29 L66 52 L91 60 L66 68 L60 91 L54 68 L29 60 L54 52 Z" fill="rgba(242,244,246,.08)"/>
+              <path d="M60 38 L63 56 L82 60 L63 64 L60 82 L57 64 L38 60 L57 56 Z"/>
+              <path d="M60 31 L60 89 M31 60 L89 60" opacity=".62"/>
+            </g>
+            <g fill="rgba(242,244,246,.80)" font-family="Arial, sans-serif" font-weight="700" font-size="5.4" letter-spacing=".7">
+              <text><textPath href="#logoTopArc" startOffset="50%" text-anchor="middle">NAVIGARE NECESSE EST,</textPath></text>
+              <text><textPath href="#logoBottomArc" startOffset="50%" text-anchor="middle">VIVERE NON EST NECESSE</textPath></text>
+            </g>
+            <g fill="rgba(242,244,246,.78)" font-family="Arial, sans-serif" font-weight="800" font-size="6.5" text-anchor="middle">
+              <text x="60" y="27">N</text><text x="94" y="62">E</text><text x="60" y="98">S</text><text x="26" y="62">W</text>
+            </g>
+          </svg>
         </div>
+        <div class="mobile-brand-title">SAFETY WALK 1.0</div>
       </div>
 
-      <div class="field">
-        <label for="password">Adgangskode</label>
-        <div class="input-wrap">
-          <input id="password" type="password" autocomplete="current-password" placeholder="Indtast adgangskode">
-        </div>
-      </div>
+      <section id="loginCard" class="card active">
+        <h1 class="login-title">Log in</h1>
 
-      <button id="login" class="primary">Log ind</button>
-      <div id="loginStatus" class="status"></div>
-    </section>
+        <div class="field">
+          <label for="email">Email / Username</label>
+          <div class="input-wrap">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>
+            </span>
+            <input id="email" type="email" autocomplete="username" placeholder="Enter email or username">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <span class="field-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v2"/></svg>
+            </span>
+            <input id="password" type="password" autocomplete="current-password" placeholder="Enter password">
+            <button id="togglePassword" class="eye-toggle" type="button" aria-label="Show password">
+              <svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button id="login" class="primary">LOG IN &nbsp;→</button>
+        <div id="loginStatus" class="status"></div>
+      </section>
+
+      <div class="mobile-help">
+        <span class="mobile-help-icon">?</span>
+        <span>Need help? Contact app developer</span>
+      </div>
+    </div>
 
     <section id="readyCard" class="card ready">
       <h2>Safety Walk er klar</h2>
@@ -341,6 +467,8 @@ function fmt(ts){
 
 function show(id){
   ['loginCard','readyCard','adminCard'].forEach(x=>$(x).classList.toggle('active',x===id));
+  const loginView=$('loginView');
+  if(loginView)loginView.classList.toggle('active',id==='loginCard');
 }
 
 function updateSession(){
@@ -387,6 +515,16 @@ async function loadOwnProfile(record=false){
   }
 
   return profile;
+}
+
+const togglePassword=$('togglePassword');
+if(togglePassword){
+  togglePassword.onclick=()=>{
+    const input=$('password');
+    const showing=input.type==='text';
+    input.type=showing?'password':'text';
+    togglePassword.setAttribute('aria-label',showing?'Show password':'Hide password');
+  };
 }
 
 $('login').onclick=async()=>{
