@@ -50,14 +50,86 @@ body{display:grid;place-items:center;padding:18px}
 .visual{
   position:relative;
   min-height:760px;
-  background:#030808;
+  background:
+    radial-gradient(circle at 12% 5%,rgba(0,218,205,.14),transparent 30%),
+    radial-gradient(circle at 88% 82%,rgba(0,190,210,.09),transparent 34%),
+    linear-gradient(155deg,#001018 0%,#001722 48%,#000b11 100%);
   overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.visual img{
+/* Desktop branding: no decorative START button; same visual language as the iPhone login. */
+.visual::before{
+  content:"";
+  position:absolute;
+  inset:-18%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 4% 4%,
+      transparent 0 26%,
+      rgba(12,214,202,.42) 26.1% 26.28%,
+      transparent 26.42% 33%,
+      rgba(12,214,202,.26) 33.1% 33.28%,
+      transparent 33.42% 40%,
+      rgba(12,214,202,.16) 40.1% 40.28%,
+      transparent 40.42%),
+    radial-gradient(circle at 102% 102%,
+      transparent 0 28%,
+      rgba(12,214,202,.28) 28.1% 28.26%,
+      transparent 28.4% 35%,
+      rgba(12,214,202,.18) 35.1% 35.26%,
+      transparent 35.4% 42%,
+      rgba(12,214,202,.11) 42.1% 42.26%,
+      transparent 42.4%);
+  opacity:.95;
+}
+.visual::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(118deg,transparent 0 46%,rgba(18,211,201,.045) 46.1% 46.35%,transparent 46.5% 100%),
+    radial-gradient(circle at 50% 43%,rgba(0,185,169,.09),transparent 42%);
+}
+.desktop-brand{
+  position:relative;
+  z-index:2;
   width:100%;
-  height:100%;
+  min-height:760px;
+  padding:62px 48px 58px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.desktop-brand-icon{
+  width:min(55%,365px);
+  aspect-ratio:1;
   object-fit:cover;
+  border-radius:50%;
   display:block;
+  margin:0 0 48px;
+  filter:
+    drop-shadow(0 0 18px rgba(0,226,207,.24))
+    drop-shadow(0 18px 34px rgba(0,0,0,.28));
+}
+.desktop-brand-title{
+  width:100%;
+  margin:0;
+  color:#e5e8ea;
+  text-align:center;
+  white-space:nowrap;
+  font-size:clamp(48px,4.25vw,66px);
+  line-height:.96;
+  font-weight:900;
+  letter-spacing:-.035em;
+  text-transform:uppercase;
+  -webkit-text-stroke:.45px rgba(18,199,212,.58);
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.16),
+    0 3px 10px rgba(0,0,0,.55);
 }
 .panel{
   min-height:760px;
@@ -275,6 +347,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
 @media(max-width:900px){
 
+  .desktop-brand{display:none}
+
   /* iPhone: login is locked; all authenticated screens must remain freely scrollable. */
   html:not(.login-locked),
   html:not(.login-locked) body{
@@ -463,8 +537,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </head>
 <body>
 <div class="shell">
-  <aside class="visual">
-    <img src="./safety-walk-cover.png" alt="Safety Walk 1.0">
+  <aside class="visual" aria-label="Safety Walk 1.0">
+    <div class="desktop-brand">
+      <img class="desktop-brand-icon" src="./icon-512.png?v=153" alt="">
+      <div class="desktop-brand-title">SAFETY WALK 1.0</div>
+    </div>
   </aside>
 
   <main class="panel">
