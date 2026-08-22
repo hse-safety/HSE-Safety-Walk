@@ -993,7 +993,7 @@ function renderUsers(users){
           if(confirm(
             'Promote '+name+' to Administrator?\n\n'+
             'This gives the user full User Management access. '+
-            'Administrator accounts cannot be deactivated or deleted from this screen.'
+            'Administrator accounts cannot be deactivated. Another administrator can delete them later.'
           )){
             adminAction(
               {action:'promote_admin',user_id:u.id},
@@ -1027,11 +1027,21 @@ function renderUsers(users){
       };
       acts.appendChild(p);
 
+    }
+
+    // Every account except the currently signed-in administrator can be removed.
+    if(u.id!==currentProfile?.id){
       const d=document.createElement('button');
       d.className='danger';
       d.textContent='Delete';
       d.onclick=()=>{
-        if(confirm('Permanently delete '+(u.display_name||u.email)+'?')){
+        const name=u.display_name||u.email;
+        const roleText=u.role==='admin'?'Administrator':'User';
+        if(confirm(
+          'Permanently delete '+name+'?\n\n'+
+          'Role: '+roleText+'\n'+
+          'This action cannot be undone.'
+        )){
           adminAction({action:'delete',user_id:u.id},refreshUsers);
         }
       };
