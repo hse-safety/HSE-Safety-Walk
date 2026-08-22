@@ -196,6 +196,11 @@ button{
   color:#8a5300;
   border:1px solid #ecd2a5;
 }
+.promote-admin{
+  background:#edf8f0;
+  color:var(--green-dark);
+  border:1px solid #b9dfc4;
+}
 .danger{
   background:#fff1ef;
   color:var(--red);
@@ -1045,6 +1050,26 @@ function renderUsers(users){
     acts.className='actions';
 
     if(u.role!=='admin'){
+      if(u.active){
+        const a=document.createElement('button');
+        a.className='promote-admin';
+        a.textContent='Make Admin';
+        a.onclick=()=>{
+          const name=u.display_name||u.email;
+          if(confirm(
+            'Promote '+name+' to Administrator?\n\n'+
+            'This gives the user full User Management access. '+
+            'Administrator accounts cannot be deactivated or deleted from this screen.'
+          )){
+            adminAction(
+              {action:'promote_admin',user_id:u.id},
+              refreshUsers
+            );
+          }
+        };
+        acts.appendChild(a);
+      }
+
       const t=document.createElement('button');
       t.className=u.active?'warning':'secondary';
       t.textContent=u.active?'Deactivate':'Activate';
