@@ -10,7 +10,7 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#00131f">
 <title>SAFETY WALK 1.0 – Login</title>
-<!-- Safety Walk login master: 2026-08-22 13:39; English UI; iPhone admin scroll fix -->
+<!-- Safety Walk login master: 2026-08-22 14:25; English UI; iPhone scroll fix; self-service password change -->
 <style>
 :root{
   --green:#12843b;
@@ -149,7 +149,10 @@ button{
 .ready p{font-size:18px;color:var(--mut);margin-bottom:28px}
 .ready .row{margin-top:0}
 .ready .primary{width:auto;min-width:260px}
-.admin h2{font-size:38px;margin-bottom:22px}
+.admin h2,.password-card h2{font-size:38px;margin-bottom:22px}
+.password-card .field{margin-bottom:18px}
+.password-card input{height:54px;font-size:16px}
+.password-card label{font-size:15px}
 .userlist{
   border:1px solid var(--line);
   border-radius:14px;
@@ -205,7 +208,8 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
     touch-action:pan-y !important;
   }
   html:not(.login-locked) .ready,
-  html:not(.login-locked) .admin{
+  html:not(.login-locked) .admin,
+  html:not(.login-locked) .password-card{
     touch-action:pan-y !important;
   }
   html:not(.login-locked) .admin{
@@ -325,7 +329,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
     border:1px solid rgba(255,255,255,.78);border-radius:16px;background:rgba(255,255,255,.96);
     box-shadow:0 10px 30px rgba(0,0,0,.20)
   }
-  .ready,.admin{
+  .ready,.admin,.password-card{
     width:calc(100% - 24px);max-width:560px;margin:110px auto 24px;padding:22px 18px;border-radius:22px;
     background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.82);
     box-shadow:0 18px 48px rgba(0,0,0,.28)
@@ -334,7 +338,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
   .ready p{font-size:16px}
   .ready .primary{width:100%;min-width:0}
   .ready .row{display:grid;grid-template-columns:1fr;gap:10px}
-  .admin h2{font-size:30px}
+  .admin h2,.password-card h2{font-size:30px}
 }
 
 @media(max-width:430px){
@@ -424,9 +428,30 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
       
       <div class="row">
         <button id="startApp" class="primary">Start Safety Walk</button>
+        <button id="changePasswordBtn" class="secondary">Change Password</button>
         <button id="adminBtn" class="secondary" style="display:none">User Management</button>
       </div>
       <div id="readyStatus" class="status"></div>
+    </section>
+
+    <section id="passwordCard" class="card password-card">
+      <h2>Change Password</h2>
+
+      <div class="field">
+        <label for="ownNewPassword">New Password</label>
+        <input id="ownNewPassword" type="password" autocomplete="new-password" placeholder="Minimum 8 characters">
+      </div>
+
+      <div class="field">
+        <label for="ownConfirmPassword">Confirm New Password</label>
+        <input id="ownConfirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+      </div>
+
+      <div class="row">
+        <button id="saveOwnPassword" class="primary" style="width:auto">Update Password</button>
+        <button id="cancelOwnPassword" class="secondary">Back</button>
+      </div>
+      <div id="passwordStatus" class="status"></div>
     </section>
 
     <section id="adminCard" class="card admin">
@@ -494,7 +519,7 @@ function fmt(ts){
 function show(id){
   const isLogin=id==='loginCard';
 
-  ['loginCard','readyCard','adminCard'].forEach(x=>$(x).classList.toggle('active',x===id));
+  ['loginCard','readyCard','passwordCard','adminCard'].forEach(x=>$(x).classList.toggle('active',x===id));
 
   const loginView=$('loginView');
   if(loginView)loginView.classList.toggle('active',isLogin);
@@ -588,6 +613,9 @@ $('login').onclick=async()=>{
 $('logout').onclick=async()=>{
   await supabase.auth.signOut();
   currentProfile=null;
+  $('ownNewPassword').value='';
+  $('ownConfirmPassword').value='';
+  status('passwordStatus','');
   updateSession();
   show('loginCard');
 };
@@ -615,6 +643,57 @@ $('startApp').onclick=async()=>{
     document.close();
   }catch(err){
     status('readyStatus','Unable to load Safety Walk: '+err.message);
+  }
+};
+
+
+$('changePasswordBtn').onclick=()=>{
+  status('readyStatus','');
+  status('passwordStatus','');
+  $('ownNewPassword').value='';
+  $('ownConfirmPassword').value='';
+  show('passwordCard');
+  requestAnimationFrame(()=>$('ownNewPassword').focus());
+};
+
+$('cancelOwnPassword').onclick=()=>{
+  status('passwordStatus','');
+  $('ownNewPassword').value='';
+  $('ownConfirmPassword').value='';
+  show('readyCard');
+};
+
+$('saveOwnPassword').onclick=async()=>{
+  status('passwordStatus','');
+
+  const newPassword=$('ownNewPassword').value;
+  const confirmPassword=$('ownConfirmPassword').value;
+
+  if(newPassword.length<8){
+    status('passwordStatus','Password must contain at least 8 characters.');
+    return;
+  }
+
+  if(newPassword!==confirmPassword){
+    status('passwordStatus','The passwords do not match.');
+    return;
+  }
+
+  $('saveOwnPassword').disabled=true;
+  status('passwordStatus','Updating password…',true);
+
+  try{
+    const {error}=await supabase.auth.updateUser({password:newPassword});
+    if(error)throw error;
+
+    $('ownNewPassword').value='';
+    $('ownConfirmPassword').value='';
+    show('readyCard');
+    status('readyStatus','Password updated successfully.',true);
+  }catch(err){
+    status('passwordStatus',err.message||'Unable to update password.');
+  }finally{
+    $('saveOwnPassword').disabled=false;
   }
 };
 
