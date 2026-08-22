@@ -1,13 +1,13 @@
-const CACHE_NAME = 'hse-safety-walk-v145';
+const CACHE_NAME = 'hse-safety-walk-v147';
 const APP_SHELL = [
   './',
   './index.html',
   './app-v137.html',
-  './safety-walk-cover.png?v=145',
-  './manifest.webmanifest?v=145',
-  './icon-192.png?v=145',
-  './icon-512.png?v=145',
-  './apple-touch-icon.png?v=145'
+  './safety-walk-cover.png?v=147',
+  './manifest.webmanifest?v=147',
+  './icon-192.png?v=147',
+  './icon-512.png?v=147',
+  './apple-touch-icon.png?v=147'
 ];
 
 self.addEventListener('install', event => {
