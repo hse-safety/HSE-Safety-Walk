@@ -833,7 +833,7 @@ $('startApp').onclick=async()=>{
     };
 
     const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\u003c');
-    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';<\\/scr'+'ipt>';
+    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';</scr'+'ipt>';
 
     if(html.includes('</head>')){
       html=html.replace('</head>',identityScript+'</head>');
