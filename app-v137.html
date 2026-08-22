@@ -4437,7 +4437,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
 <div class="meta-item meta-supervisor"><label>SUPERVISOR OR FOREMAN</label><input placeholder="Name" type="text" value=""></div>
 <div class="meta-item meta-kam"><label>KAM OR PROJECT MANAGER</label><input placeholder="Name" type="text" value=""></div>
 <div class="meta-item meta-site"><label>SITE &amp; PROJECT NO.</label><input placeholder="Site / project no." type="text" value=""></div>
-<div class="meta-item meta-date"><label>DATE</label><input id="inspectionDate" placeholder="Date" type="date" value="2026-08-17"></div>
+<div class="meta-item meta-date"><label>DATE</label><input id="inspectionDate" placeholder="Date" type="date" value=""></div>
 
 
 <div class="meta-item meta-performed"><label>PERFORMED BY</label><input placeholder="Name" type="text" value=""></div>
@@ -5618,6 +5618,58 @@ html.apple-mobile-ui .mobile-more-menu button:active {
         if (bestPracticeBtn) bestPracticeBtn.textContent = 'Add Best';
     }
 
+    /* ==========================================================
+       v161 — authenticated PERFORMED BY identity lock
+       Normal users inherit their full name from the authenticated
+       profile. Administrators are deliberately exempt.
+       The lock survives autosave, Clear All, SEND/AirDrop, desktop
+       final editing and PDF export.
+       ========================================================== */
+    const safetyWalkIdentity = (() => {
+        const raw = window.__HSE_SW_IDENTITY;
+        if (!raw || typeof raw !== 'object') return null;
+        return {
+            userId: String(raw.userId || ''),
+            displayName: String(raw.displayName || '').trim(),
+            email: String(raw.email || ''),
+            role: String(raw.role || 'user').trim().toLowerCase()
+        };
+    })();
+
+    const performedByInput = document.querySelector('.meta-performed input');
+    const performedByIdentityLocked = !!(
+        performedByInput &&
+        safetyWalkIdentity &&
+        safetyWalkIdentity.role !== 'admin' &&
+        safetyWalkIdentity.displayName
+    );
+
+    function enforcePerformedByIdentity() {
+        if (!performedByIdentityLocked || !performedByInput) return;
+        const lockedName = safetyWalkIdentity.displayName;
+        if (performedByInput.value !== lockedName) performedByInput.value = lockedName;
+        performedByInput.setAttribute('value', lockedName);
+        performedByInput.readOnly = true;
+        performedByInput.setAttribute('readonly', '');
+        performedByInput.setAttribute('aria-readonly', 'true');
+        performedByInput.dataset.identityLocked = 'true';
+        performedByInput.autocomplete = 'off';
+    }
+
+    if (performedByIdentityLocked && performedByInput) {
+        enforcePerformedByIdentity();
+
+        ['input', 'change'].forEach(type => {
+            performedByInput.addEventListener(type, enforcePerformedByIdentity, true);
+        });
+        ['beforeinput', 'paste', 'drop'].forEach(type => {
+            performedByInput.addEventListener(type, event => {
+                event.preventDefault();
+                enforcePerformedByIdentity();
+            }, true);
+        });
+    }
+
     function closeMobileMoreMenu() {
         if (!mobileMoreMenu || !moreActionsBtn) return;
         mobileMoreMenu.hidden = true;
@@ -5689,6 +5741,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
     }
 
     function captureAutosaveState() {
+        enforcePerformedByIdentity();
         const staticFields = getStaticAutosaveFields().map(field => ({
             tag: field.tagName,
             type: field instanceof HTMLInputElement ? field.type : '',
@@ -5823,6 +5876,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
                 field.value = saved.value ?? '';
             }
         });
+        enforcePerformedByIdentity();
 
         if (observationsList && typeof state.observationsHtml === 'string') observationsList.innerHTML = state.observationsHtml;
         if (manualObservationsList && typeof state.manualObservationsHtml === 'string') manualObservationsList.innerHTML = state.manualObservationsHtml;
@@ -5848,6 +5902,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
         document.querySelectorAll('.photo-grid').forEach(updatePhotoGridState);
         updateObservations();
         updateBestPracticeSection();
+        enforcePerformedByIdentity();
     }
 
     function startPersistentAutosave() {
@@ -6435,6 +6490,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
                 });
             }
         });
+        enforcePerformedByIdentity();
 
         // Remove every rendered/photo export object, including data-URL images from
         // question cards, manual observations and Best Practice cards.
@@ -7307,6 +7363,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
         closeMobileMoreMenu();
         updateObservations();
         updateBestPracticeSection();
+        enforcePerformedByIdentity();
 
         const clone = document.documentElement.cloneNode(true);
         syncStandaloneSnapshotState(document.documentElement, clone);
@@ -7410,6 +7467,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
         .catch(() => {})
         .finally(() => restoreSavedDraft())
         .finally(() => {
+            enforcePerformedByIdentity();
             startPersistentAutosave();
         });
 
