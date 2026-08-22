@@ -1,140 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-  <title>Safety Walk 1.0</title>
-  <meta name="hse-build" content="2026-08-22-v148">
-  <meta name="theme-color" content="#031014">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="SAFETY WALK">
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=148">
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=148">
-  <link rel="manifest" href="./manifest.webmanifest?v=148">
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      min-height: 100%;
-      overflow: hidden;
-      background: #031014;
-      overscroll-behavior: none;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
-    body {
-      position: fixed;
-      inset: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .launch-screen {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      background: #031014;
-    }
-    .launch-art {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: 50% 50%;
-      display: block;
-      pointer-events: none;
-    }
-    .start-hotspot {
-      position: absolute;
-      z-index: 2;
-      display: block;
-      border: 0;
-      border-radius: 999px;
-      background: transparent;
-      color: transparent;
-      text-decoration: none;
-      -webkit-tap-highlight-color: rgba(52, 255, 218, 0.12);
-      touch-action: manipulation;
-      cursor: pointer;
-      outline: none;
-    }
-    .start-hotspot::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: rgba(255,255,255,0);
-      transition: background .08s ease, transform .08s ease;
-    }
-    .start-hotspot:active::after {
-      background: rgba(255,255,255,.08);
-      transform: scale(.985);
-    }
-    .start-hotspot:focus-visible {
-      box-shadow: 0 0 0 3px rgba(255,255,255,.9), 0 0 0 7px rgba(0,216,183,.45);
-    }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      white-space: nowrap;
-      border: 0;
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .launch-screen { animation: fadeIn .32s ease-out both; }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAFETY WALK 1.0</title>
+<meta http-equiv="refresh" content="0; url=./safety-login.html">
+<link rel="canonical" href="./safety-login.html">
+<script>
+window.location.replace("./safety-login.html");
+</script>
 </head>
-<body>
-  <main class="launch-screen" aria-label="Safety Walk 1.0">
-    <img id="launchArt" class="launch-art" src="./safety-walk-cover.png?v=148" alt="">
-    <a id="startHotspot" class="start-hotspot" href="./safety-login-test.html" aria-label="Start Safety Walk">
-      <span class="sr-only">START</span>
-    </a>
-  </main>
-
-  <script>
-    (() => {
-      const art = document.getElementById('launchArt');
-      const hotspot = document.getElementById('startHotspot');
-
-      // Coordinates of the visible Start Template button in safety-walk-cover.png.
-      // The hit area is recalculated from the image's real cover-scaling, so it
-      // remains aligned across current iPhone screen sizes and orientations.
-      const button = { x: 240, y: 1134, width: 458, height: 122 };
-
-      function positionHotspot() {
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const nw = art.naturalWidth || 941;
-        const nh = art.naturalHeight || 1672;
-        const scale = Math.max(vw / nw, vh / nh);
-        const renderedW = nw * scale;
-        const renderedH = nh * scale;
-        const offsetX = (vw - renderedW) / 2;
-        const offsetY = (vh - renderedH) / 2;
-
-        hotspot.style.left = `${offsetX + button.x * scale}px`;
-        hotspot.style.top = `${offsetY + button.y * scale}px`;
-        hotspot.style.width = `${button.width * scale}px`;
-        hotspot.style.height = `${button.height * scale}px`;
-      }
-
-      if (art.complete) positionHotspot();
-      else art.addEventListener('load', positionHotspot, { once: true });
-
-      window.addEventListener('resize', positionHotspot, { passive: true });
-      window.addEventListener('orientationchange', () => setTimeout(positionHotspot, 80), { passive: true });
-    })();
-  </script>
-</body>
+<body></body>
 </html>
