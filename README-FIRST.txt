@@ -1,23 +1,21 @@
-HSE Safety Walk v153 — Desktop branding refinement
+HSE Safety Walk v156 — LEFT PANEL FIX
 
-CHANGE ONLY
-- Removed the decorative START button from the LEFT desktop branding panel.
-- Rebuilt the left desktop branding with the approved two-person Safety Walk icon.
-- Changed the desktop title to the same sharp uppercase visual style used on the iPhone login:
-  SAFETY WALK 1.0
-- Added restrained teal arcs/background detailing.
+Changed ONLY the left desktop visual:
+- Restored the approved green two-person icon.
+- Matched the attached reference layout.
+- Title is "Safety Walk 1.0".
+- Decorative START button removed completely.
+- Icon is embedded directly in the HTML so it also works when opened locally from Desktop.
 
-NOT CHANGED
-- iPhone login design
-- Login/authentication
-- Supabase configuration
-- Free Plan Storage meter
-- User Management
+Preserved:
+- Make Admin
+- Storage usage meter
+- Login
 - Change Password
-- The functional Start Safety Walk button on the Ready panel
-- app-v137.html / Safety Walk template
-- SEND / AirDrop / Mail
-- Clear All / autosave
+- User Management
+- Functional Start Safety Walk button on the RIGHT Ready panel
+- Supabase configuration
+- Safety Walk app/template
 
 GitHub:
-Upload ONLY safety-login.html and overwrite the existing file.
+Upload ONLY safety-login.html and overwrite the existing safety-login.html.
