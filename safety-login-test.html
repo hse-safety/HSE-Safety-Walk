@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="da">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -10,7 +10,7 @@
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#00131f">
 <title>SAFETY WALK 1.0 – Login</title>
-<!-- Updated master login: 2026-08-22, no compass/Latin logo -->
+<!-- Safety Walk login master: 2026-08-22 13:39; English UI; iPhone admin scroll fix -->
 <style>
 :root{
   --green:#12843b;
@@ -143,7 +143,7 @@ button{
 }
 .session.show{display:flex}
 .session strong{font-size:18px}
-.session span{display:block;color:var(--mut);font-size:14px;margin-top:3px}
+.session span{display:none}
 .session button{min-height:44px;font-size:15px;padding:0 16px}
 .ready h2{font-size:42px;margin-bottom:12px}
 .ready p{font-size:18px;color:var(--mut);margin-bottom:28px}
@@ -180,6 +180,40 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 .field-icon,.eye-toggle{display:none}
 
 @media(max-width:900px){
+
+  /* iPhone: login is locked; all authenticated screens must remain freely scrollable. */
+  html:not(.login-locked),
+  html:not(.login-locked) body{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    overscroll-behavior-y:auto !important;
+    -webkit-overflow-scrolling:touch !important;
+    touch-action:pan-y !important;
+  }
+  html:not(.login-locked) .shell{
+    height:auto !important;
+    min-height:100svh !important;
+    overflow:visible !important;
+  }
+  html:not(.login-locked) .panel{
+    height:auto !important;
+    min-height:100svh !important;
+    overflow:visible !important;
+    padding-bottom:calc(110px + env(safe-area-inset-bottom)) !important;
+    touch-action:pan-y !important;
+  }
+  html:not(.login-locked) .ready,
+  html:not(.login-locked) .admin{
+    touch-action:pan-y !important;
+  }
+  html:not(.login-locked) .admin{
+    margin-top:28px !important;
+    margin-bottom:24px !important;
+    overflow:visible !important;
+  }
+
   html,body{width:100%;min-height:100%;background:#00131f}
   body{display:block;padding:0;min-height:100svh;overflow-x:hidden}
   .shell{
@@ -344,7 +378,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
         <strong id="sessionName"></strong>
         <span id="sessionRole"></span>
       </div>
-      <button id="logout" class="secondary">Log ud</button>
+      <button id="logout" class="secondary">Log Out</button>
     </div>
 
     <div id="loginView" class="login-view active">
@@ -353,7 +387,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
       </div>
 
       <section id="loginCard" class="card active">
-        <h1 class="login-title">Log in</h1>
+        <h1 class="login-title">LOG IN</h1>
 
         <div class="field">
           <label for="email">Email</label>
@@ -381,43 +415,43 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 
       <div class="mobile-help">
         <span class="mobile-help-icon">?</span>
-        <span>Need help - Contact APP admin</span>
+        <span>Need help? Contact the App Administrator.</span>
       </div>
     </div>
 
     <section id="readyCard" class="card ready">
-      <h2>Safety Walk er klar</h2>
-      <p>Du er logget ind.</p>
+      <h2>Ready</h2>
+      
       <div class="row">
         <button id="startApp" class="primary">Start Safety Walk</button>
-        <button id="adminBtn" class="secondary" style="display:none">Brugere</button>
+        <button id="adminBtn" class="secondary" style="display:none">User Management</button>
       </div>
       <div id="readyStatus" class="status"></div>
     </section>
 
     <section id="adminCard" class="card admin">
-      <h2>Brugere</h2>
+      <h2>User Management</h2>
       <div id="adminStatus" class="status"></div>
       <div id="userList" class="userlist"></div>
 
       <hr>
 
       <div class="field">
-        <label for="newName">Navn</label>
+        <label for="newName">Name</label>
         <input id="newName" placeholder="Peter Jensen">
       </div>
       <div class="field">
-        <label for="newEmail">E-mail</label>
+        <label for="newEmail">Email</label>
         <input id="newEmail" type="email" placeholder="peter@firma.dk">
       </div>
       <div class="field">
-        <label for="newPassword">Midlertidig adgangskode</label>
-        <input id="newPassword" type="password" placeholder="Mindst 8 tegn">
+        <label for="newPassword">Temporary Password</label>
+        <input id="newPassword" type="password" placeholder="Minimum 8 characters">
       </div>
 
       <div class="row">
-        <button id="createUser" class="primary" style="width:auto">Opret bruger</button>
-        <button id="back" class="secondary">Tilbage</button>
+        <button id="createUser" class="primary" style="width:auto">Create User</button>
+        <button id="back" class="secondary">Back</button>
       </div>
     </section>
   </main>
@@ -449,25 +483,35 @@ function status(id,msg,ok=false){
 }
 
 function fmt(ts){
-  if(!ts)return'Aldrig';
+  if(!ts)return 'Never';
   try{
-    return new Intl.DateTimeFormat('da-DK',{dateStyle:'short',timeStyle:'short'}).format(new Date(ts));
+    return new Intl.DateTimeFormat('en-GB',{dateStyle:'short',timeStyle:'short'}).format(new Date(ts));
   }catch{
     return ts;
   }
 }
 
 function show(id){
+  const isLogin=id==='loginCard';
+
   ['loginCard','readyCard','adminCard'].forEach(x=>$(x).classList.toggle('active',x===id));
+
   const loginView=$('loginView');
-  if(loginView)loginView.classList.toggle('active',id==='loginCard');
+  if(loginView)loginView.classList.toggle('active',isLogin);
+
+  document.documentElement.classList.toggle('login-locked',isLogin);
+  document.body.classList.toggle('authenticated-view',!isLogin);
+
+  if(!isLogin){
+    requestAnimationFrame(()=>window.scrollTo(0,0));
+  }
 }
 
 function updateSession(){
   const s=$('session');
   if(currentProfile){
     $('sessionName').textContent=currentProfile.display_name||currentProfile.email;
-    $('sessionRole').textContent=currentProfile.role==='admin'?'Administrator':'Bruger';
+    $('sessionRole').textContent='';
     s.classList.add('show');
     $('adminBtn').style.display=currentProfile.role==='admin'?'inline-block':'none';
   }else{
@@ -490,7 +534,7 @@ async function loadOwnProfile(record=false){
 
   if(!profile.active){
     await supabase.auth.signOut();
-    throw new Error('Din bruger er deaktiveret. Kontakt administrator.');
+    throw new Error('Your account has been deactivated. Contact the app administrator.');
   }
 
   if(record){
@@ -516,12 +560,12 @@ $('login').onclick=async()=>{
   const password=$('password').value;
 
   if(!email||!password){
-    status('loginStatus','Indtast e-mail og adgangskode.');
+    status('loginStatus','Enter your email and password.');
     return;
   }
 
   $('login').disabled=true;
-  status('loginStatus','Kontrollerer login…',true);
+  status('loginStatus','Signing in…',true);
 
   try{
     const {error}=await supabase.auth.signInWithPassword({email,password});
@@ -535,7 +579,7 @@ $('login').onclick=async()=>{
     await supabase.auth.signOut();
     currentProfile=null;
     updateSession();
-    status('loginStatus',err.message||'Login mislykkedes.');
+    status('loginStatus',err.message||'Unable to sign in.');
   }finally{
     $('login').disabled=false;
   }
@@ -549,14 +593,14 @@ $('logout').onclick=async()=>{
 };
 
 $('startApp').onclick=async()=>{
-  status('readyStatus','Åbner Safety Walk...',true);
+  status('readyStatus','Opening Safety Walk…',true);
 
   const {data,error}=await supabase.storage
     .from(APP_BUCKET)
     .createSignedUrl(APP_FILE,60);
 
   if(error){
-    status('readyStatus','Kunne ikke åbne Safety Walk: '+error.message);
+    status('readyStatus','Unable to open Safety Walk: '+error.message);
     return;
   }
 
@@ -570,7 +614,7 @@ $('startApp').onclick=async()=>{
     document.write(html);
     document.close();
   }catch(err){
-    status('readyStatus','Kunne ikke indlæse Safety Walk: '+err.message);
+    status('readyStatus','Unable to load Safety Walk: '+err.message);
   }
 };
 
@@ -583,7 +627,7 @@ $('adminBtn').onclick=async()=>{
 $('back').onclick=()=>show('readyCard');
 
 async function refreshUsers(){
-  status('adminStatus','Henter brugere…',true);
+  status('adminStatus','Loading users…',true);
 
   const {data,error}=await supabase
     .from('profiles')
@@ -596,7 +640,7 @@ async function refreshUsers(){
   }
 
   renderUsers(data||[]);
-  status('adminStatus',(data||[]).length+' bruger(e) fundet.',true);
+  status('adminStatus','');
 }
 
 function renderUsers(users){
@@ -610,9 +654,9 @@ function renderUsers(users){
     const info=document.createElement('div');
     info.innerHTML=
       '<strong>'+esc(u.display_name||u.email)+'</strong>'+
-      '<small>'+esc(u.email)+' · '+(u.role==='admin'?'Administrator':'Bruger')+(u.active?'':' · Deaktiveret')+'</small>'+
-      '<small><b>Seneste login:</b> '+esc(fmt(u.last_login_at))+'</small>'+
-      '<small><b>Antal logins:</b> '+Number(u.login_count||0)+'</small>';
+      '<small>'+esc(u.email)+' · '+(u.role==='admin'?'Administrator':'User')+(u.active?'':' · Deactivated')+'</small>'+
+      '<small><b>Last login:</b> '+esc(fmt(u.last_login_at))+'</small>'+
+      '<small><b>Login count:</b> '+Number(u.login_count||0)+'</small>';
 
     const acts=document.createElement('div');
     acts.className='actions';
@@ -620,32 +664,32 @@ function renderUsers(users){
     if(u.role!=='admin'){
       const t=document.createElement('button');
       t.className=u.active?'warning':'secondary';
-      t.textContent=u.active?'Deaktivér':'Aktivér';
+      t.textContent=u.active?'Deactivate':'Activate';
       t.onclick=()=>adminAction({action:'set_active',user_id:u.id,active:!u.active},refreshUsers);
       acts.appendChild(t);
 
       const p=document.createElement('button');
       p.className='secondary';
-      p.textContent='Nyt password';
+      p.textContent='Reset Password';
       p.onclick=()=>{
-        const np=prompt('Nyt password (mindst 8 tegn):');
+        const np=prompt('Enter a new password (minimum 8 characters):');
         if(np===null)return;
         if(np.length<8){
-          alert('Password skal være mindst 8 tegn.');
+          alert('Password must contain at least 8 characters.');
           return;
         }
         adminAction(
           {action:'reset_password',user_id:u.id,password:np},
-          ()=>alert('Password er ændret.')
+          ()=>alert('Password updated successfully.')
         );
       };
       acts.appendChild(p);
 
       const d=document.createElement('button');
       d.className='danger';
-      d.textContent='Slet';
+      d.textContent='Delete';
       d.onclick=()=>{
-        if(confirm('Slet '+(u.display_name||u.email)+' permanent?')){
+        if(confirm('Permanently delete '+(u.display_name||u.email)+'?')){
           adminAction({action:'delete',user_id:u.id},refreshUsers);
         }
       };
@@ -669,12 +713,12 @@ function esc(s){
 }
 
 async function adminAction(body,success){
-  status('adminStatus','Arbejder…',true);
+  status('adminStatus','Processing…',true);
 
   const {data,error}=await supabase.functions.invoke('admin-users',{body});
 
   if(error){
-    status('adminStatus',error.message||'Edge Function fejlede.');
+    status('adminStatus',error.message||'The admin service could not complete the request.');
     return;
   }
 
@@ -683,7 +727,7 @@ async function adminAction(body,success){
     return;
   }
 
-  status('adminStatus',data?.message||'Udført.',true);
+  status('adminStatus',data?.message||'Completed successfully.',true);
 
   if(success)await success(data);
 }
@@ -694,7 +738,7 @@ $('createUser').onclick=async()=>{
   const password=$('newPassword').value;
 
   if(!display_name||!email||password.length<8){
-    status('adminStatus','Udfyld navn og e-mail. Password skal være mindst 8 tegn.');
+    status('adminStatus','Enter a name and email address. The password must contain at least 8 characters.');
     return;
   }
 
