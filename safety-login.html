@@ -285,6 +285,45 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 .mobile-brand,.mobile-help{display:none}
 .field-icon,.eye-toggle{display:none}
 
+
+/* Desktop browser 100% zoom:
+   keep the left Safety Walk artwork fitted to the visible browser height,
+   independent of the height of User Management on the right. */
+@media(min-width:901px){
+  body{
+    display:block;
+    padding:18px;
+  }
+  .shell{
+    width:min(1280px,calc(100vw - 36px));
+    min-height:calc(100vh - 36px);
+    margin:0 auto;
+    align-items:start;
+    background:#00131f;
+  }
+  .visual{
+    height:calc(100vh - 36px);
+    min-height:0;
+    align-self:start;
+    overflow:hidden;
+  }
+  .desktop-brand{
+    height:100%;
+  }
+  .desktop-brand-art{
+    width:100%;
+    height:100%;
+    min-height:0;
+    object-fit:cover;
+    object-position:center center;
+  }
+  .panel{
+    min-height:calc(100vh - 36px);
+    box-sizing:border-box;
+    background:#fff;
+  }
+}
+
 @media(max-width:900px){
 
   .desktop-brand{display:none}
@@ -773,7 +812,35 @@ $('startApp').onclick=async()=>{
     const r=await fetch(data.signedUrl);
     if(!r.ok)throw new Error('HTTP '+r.status);
 
-    const html=await r.text();
+    let html=await r.text();
+
+    // Pass the authenticated Safety Walk identity into the private app.
+    // Normal users are tied to their full profile name in PERFORMED BY.
+    // Administrators remain exempt and can edit PERFORMED BY normally.
+    const displayName=String(currentProfile?.display_name||'').trim();
+    const role=String(currentProfile?.role||'user').trim().toLowerCase();
+
+    if(role!=='admin' && !displayName){
+      status('readyStatus','Unable to start Safety Walk: the user profile is missing a full name. Contact the APP administrator.');
+      return;
+    }
+
+    const identity={
+      userId:String(currentProfile?.id||''),
+      displayName,
+      email:String(currentProfile?.email||''),
+      role
+    };
+
+    const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\u003c');
+    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';<\\/scr'+'ipt>';
+
+    if(html.includes('</head>')){
+      html=html.replace('</head>',identityScript+'</head>');
+    }else{
+      html=identityScript+html;
+    }
+
     document.documentElement.classList.remove('login-locked');
     document.open();
     document.write(html);
