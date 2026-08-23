@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>HSE Safety Walk</title>
-<meta name="hse-build" content="2026-08-19-v139">
+<meta name="hse-build" content="2026-08-23-v142">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=147">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=147">
 <link rel="manifest" href="./manifest.webmanifest?v=147">
@@ -4414,6 +4414,27 @@ html.apple-mobile-ui .mobile-more-menu button:active {
 }
 </style>
 
+
+<style id="v142-question-notes-autogrow">
+/* ==========================================================
+   v142 — AUTO-GROW QUESTION NOTES
+   Question NOTES expand with their content instead of scrolling.
+   The complete inspection-item frame therefore grows automatically.
+   ========================================================== */
+.inspection-item .item-body > .left-col textarea {
+    overflow-y: hidden !important;
+    resize: none !important;
+}
+.pdf-static-question-note {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+}
+</style>
+
 </head>
 <body>
 <div aria-hidden="true" class="print-repeat-header">
@@ -5564,7 +5585,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
 <script>
 (() => {
     'use strict';
-    document.documentElement.dataset.hseBuild = 'v141';
+    document.documentElement.dataset.hseBuild = 'v142';
 
     const IMAGE_MAX_DIMENSION = 620;
     const IMAGE_QUALITY = 0.36;
@@ -5900,6 +5921,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
             initializePhotoSlot(slot);
         });
         document.querySelectorAll('.photo-grid').forEach(updatePhotoGridState);
+        resizeAllQuestionNotes();
         updateObservations();
         updateBestPracticeSection();
         enforcePerformedByIdentity();
@@ -5907,7 +5929,12 @@ html.apple-mobile-ui .mobile-more-menu button:active {
 
     function startPersistentAutosave() {
         autosaveReady = true;
-        document.addEventListener('input', () => scheduleAutosave(), true);
+        document.addEventListener('input', event => {
+            if (event.target instanceof HTMLTextAreaElement && event.target.matches('.inspection-item .left-col textarea')) {
+                resizeQuestionNote(event.target);
+            }
+            scheduleAutosave();
+        }, true);
         document.addEventListener('change', () => scheduleAutosave(), true);
 
         const root = document.getElementById('hseDoc');
@@ -5924,6 +5951,47 @@ html.apple-mobile-ui .mobile-more-menu button:active {
 
     let manualObservationSerial = Math.max(0, ...[...document.querySelectorAll('#manualObservationsList .observation-card[data-index^="manual-"]')].map(card => Number((card.dataset.index || '').split('-').pop()) || 0));
     let bestPracticeSerial = Math.max(0, ...[...document.querySelectorAll('#bestPracticeList .best-practice-card[data-index^="best-practice-"]')].map(card => Number((card.dataset.index || '').split('-').pop()) || 0));
+
+
+    /* v142 — Question NOTES automatically grow to show all entered text.
+       The initial visible size is retained as the minimum size. Once the
+       content needs more room, both the textarea and the complete question
+       card expand vertically. */
+    function resizeQuestionNote(textarea) {
+        if (!(textarea instanceof HTMLTextAreaElement) || !textarea.matches('.inspection-item .left-col textarea')) return;
+        const leftCol = textarea.closest('.left-col');
+
+        if (!textarea.dataset.autoGrowMinHeight) {
+            const initialTextareaHeight = Math.ceil(textarea.getBoundingClientRect().height || 120);
+            textarea.dataset.autoGrowMinHeight = String(Math.max(1, initialTextareaHeight));
+        }
+        if (leftCol && !leftCol.dataset.autoGrowMinHeight) {
+            const initialColumnHeight = Math.ceil(leftCol.getBoundingClientRect().height || 176);
+            leftCol.dataset.autoGrowMinHeight = String(Math.max(1, initialColumnHeight));
+        }
+
+        if (leftCol) {
+            const columnMin = Number(leftCol.dataset.autoGrowMinHeight) || 176;
+            leftCol.style.setProperty('height', 'auto', 'important');
+            leftCol.style.setProperty('min-height', columnMin + 'px', 'important');
+            leftCol.style.setProperty('grid-template-rows', 'auto auto', 'important');
+            leftCol.style.setProperty('align-self', 'stretch', 'important');
+        }
+
+        const minHeight = Number(textarea.dataset.autoGrowMinHeight) || 120;
+        textarea.style.setProperty('height', 'auto', 'important');
+        textarea.style.setProperty('min-height', minHeight + 'px', 'important');
+        textarea.style.setProperty('max-height', 'none', 'important');
+        textarea.style.setProperty('overflow-y', 'hidden', 'important');
+        textarea.style.setProperty('resize', 'none', 'important');
+
+        const requiredHeight = Math.max(minHeight, Math.ceil(textarea.scrollHeight + 2));
+        textarea.style.setProperty('height', requiredHeight + 'px', 'important');
+    }
+
+    function resizeAllQuestionNotes(root = document) {
+        root.querySelectorAll('.inspection-item .left-col textarea').forEach(resizeQuestionNote);
+    }
 
     function updatePhotoGridState(grid) {
         if (!grid) return;
@@ -6089,6 +6157,8 @@ html.apple-mobile-ui .mobile-more-menu button:active {
     }
 
     document.querySelectorAll('.photo-slot').forEach(initializePhotoSlot);
+    resizeAllQuestionNotes();
+    window.addEventListener('resize', () => resizeAllQuestionNotes());
 
     lightboxClose?.addEventListener('click', closeLightbox);
     lightbox?.addEventListener('click', event => {
@@ -6491,6 +6561,7 @@ html.apple-mobile-ui .mobile-more-menu button:active {
             }
         });
         enforcePerformedByIdentity();
+        resizeAllQuestionNotes();
 
         // Remove every rendered/photo export object, including data-URL images from
         // question cards, manual observations and Best Practice cards.
@@ -6702,9 +6773,53 @@ html.apple-mobile-ui .mobile-more-menu button:active {
         });
     }
 
+
+    /* v142 — Render question NOTES as ordinary expanding text blocks in the
+       direct PDF clone. This avoids textarea scroll/view-port clipping in the
+       SVG renderer and guarantees that every entered line is visible. */
+    function convertQuestionNotesToStaticPdf(sourceRoot, cloneRoot) {
+        const sourceNotes = [...sourceRoot.querySelectorAll('.inspection-item .left-col textarea')];
+        const cloneNotes = [...cloneRoot.querySelectorAll('.inspection-item .left-col textarea')];
+
+        sourceNotes.forEach((source, index) => {
+            const clone = cloneNotes[index];
+            if (!clone) return;
+
+            const style = getComputedStyle(source);
+            const rect = source.getBoundingClientRect();
+            const box = document.createElement('div');
+            box.className = 'pdf-static-question-note';
+            box.textContent = source.value || '';
+
+            box.style.boxSizing = style.boxSizing || 'border-box';
+            box.style.width = '100%';
+            box.style.minHeight = Math.max(1, Math.ceil(rect.height), Math.ceil(source.scrollHeight || 0)) + 'px';
+            box.style.height = 'auto';
+            box.style.padding = style.padding;
+            box.style.border = style.border;
+            box.style.borderRadius = style.borderRadius;
+            box.style.background = style.backgroundColor || '#ffffff';
+            box.style.color = style.color || '#111827';
+            box.style.fontFamily = style.fontFamily;
+            box.style.fontSize = style.fontSize;
+            box.style.fontWeight = style.fontWeight;
+            box.style.fontStyle = style.fontStyle;
+            box.style.lineHeight = style.lineHeight;
+            box.style.letterSpacing = style.letterSpacing;
+            box.style.textAlign = style.textAlign;
+            box.style.whiteSpace = 'pre-wrap';
+            box.style.overflowWrap = 'break-word';
+            box.style.wordBreak = 'break-word';
+            box.style.overflow = 'visible';
+
+            clone.replaceWith(box);
+        });
+    }
+
     function preparePdfClone(sourceDoc) {
         const clone = sourceDoc.cloneNode(true);
         syncExportFormState(sourceDoc, clone);
+        convertQuestionNotesToStaticPdf(sourceDoc, clone);
         clone.removeAttribute('id');
         clone.classList.add('pdf-export-root');
         copyPdfPhotoGeometry(sourceDoc, clone);
