@@ -15,7 +15,7 @@
 <link rel="manifest" href="./manifest.webmanifest?v=150">
 <title>SAFETY WALK 1.0 – Login</title>
 <link rel="canonical" href="./safety-login.html">
-<!-- Safety Walk production login: 2026-08-22; English UI; iPhone scroll fix; self-service password change -->
+<!-- SAFETY WALK 1.0 production login: On-Site and KVI Premises access control enabled. -->
 <style>
 :root{
   --green:#12843b;
@@ -168,6 +168,76 @@ button{
 .ready .primary{width:auto;min-width:260px}
 .admin h2,.password-card h2{font-size:38px;margin-bottom:22px}
 
+.ready-module-row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  width:100%;
+  margin:0 0 16px;
+}
+.ready-module-row .primary{
+  width:100%;
+  min-width:0;
+}
+.access-create{
+  margin:2px 0 22px;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#f8fafb;
+}
+.access-create-title,
+.user-access-title{
+  display:block;
+  margin:0 0 10px;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--ink);
+}
+.access-options{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  align-items:center;
+}
+.access-option{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+}
+.access-option input{
+  width:18px;
+  height:18px;
+  min-height:0;
+  padding:0;
+  margin:0;
+  accent-color:var(--green);
+}
+.user-info{min-width:0}
+.user-access{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid #edf0f2;
+}
+.user-access .access-options{gap:8px 14px}
+.user-access .access-option{font-size:12px}
+.user-access .access-option input{width:16px;height:16px}
+.user-access-note{
+  margin-top:6px;
+  font-size:11px;
+  color:var(--mut);
+}
+.module-hidden{display:none !important}
+@media(max-width:560px){
+  .ready-module-row{grid-template-columns:1fr}
+}
+
 /* Admin storage meter — current project storage against Free Plan quotas. */
 .usage-card{
   margin:0 0 22px;
@@ -273,8 +343,36 @@ button{
 .user:last-child{border-bottom:0}
 .user.disabled{background:#fafafa;opacity:.62}
 .user small{display:block;color:var(--mut);margin-top:4px}
-.actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.actions button{min-height:36px;height:36px;padding:0 10px;font-size:12px}
+/* User Management: keep action controls in a dedicated vertical column so they never cover Inspection Access. */
+.actions{
+  display:flex;
+  flex-direction:column;
+  flex-wrap:nowrap;
+  gap:8px;
+  justify-content:flex-start;
+  align-items:stretch;
+  width:168px;
+  align-self:start;
+}
+.actions button{
+  width:100%;
+  min-height:40px;
+  height:auto;
+  padding:9px 12px;
+  font-size:12px;
+  line-height:1.15;
+  white-space:normal;
+}
+.user{
+  grid-template-columns:minmax(0,1fr) 168px;
+  gap:18px;
+  align-items:start;
+}
+.user-access-note{line-height:1.4;max-width:100%}
+@media(max-width:480px){
+  .user{grid-template-columns:1fr;gap:14px}
+  .actions{width:100%}
+}
 .admin .field{margin-bottom:18px}
 .admin input{height:54px;font-size:16px}
 .admin label{font-size:15px}
@@ -572,8 +670,11 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
     <section id="readyCard" class="card ready">
       <h2>Ready</h2>
       
+      <div class="ready-module-row" aria-label="Inspection modules">
+        <button id="onsiteAppBtn" class="primary">On-Site</button>
+        <button id="kviPremisesBtn" class="primary">KVI Premises</button>
+      </div>
       <div class="row">
-        <button id="startApp" class="primary">Start Safety Walk</button>
         <button id="changePasswordBtn" class="secondary">Change Password</button>
         <button id="adminBtn" class="secondary" style="display:none">User Management</button>
       </div>
@@ -645,6 +746,15 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
         <input id="newPassword" type="password" placeholder="Minimum 8 characters">
       </div>
 
+      <div class="access-create">
+        <span class="access-create-title">Inspection Access</span>
+        <div class="access-options">
+          <label class="access-option"><input id="newAccessOnsite" type="checkbox" checked> <span>On-Site</span></label>
+          <label class="access-option"><input id="newAccessOffice" type="checkbox"> <span>Office Facility</span></label>
+          <label class="access-option"><input id="newAccessWarehouse" type="checkbox"> <span>Warehouse Facility</span></label>
+        </div>
+      </div>
+
       <div class="row">
         <button id="createUser" class="primary" style="width:auto">Create User</button>
         <button id="back" class="secondary">Back</button>
@@ -658,7 +768,9 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
-const APP_BUCKET='safety-app', APP_FILE='app-v137.html';
+const MODULE_BUCKET='safety-modules';
+const ONSITE_APP_FILE='onsite-v1.0.html';
+const KVI_APP_FILE='kvi-premises-v1.0.html';
 
 // Free Plan storage limits verified against Supabase documentation on 22 Aug 2026.
 // These are intentionally limited to storage capacity, not MAU or egress.
@@ -668,6 +780,8 @@ const FREE_FILE_STORAGE_LIMIT_BYTES=1024*1024*1024; // 1 GB
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 let currentProfile=null;
+let currentAccess={allow_onsite:true,allow_office:false,allow_warehouse:false};
+let accessTableAvailable=true;
 
 document.documentElement.classList.add('login-locked');
 document.addEventListener('contextmenu',e=>{
@@ -710,14 +824,30 @@ function show(id){
 
 function updateSession(){
   const s=$('session');
+  const onsiteBtn=$('onsiteAppBtn');
+  const premisesBtn=$('kviPremisesBtn');
+
   if(currentProfile){
     $('sessionName').textContent=currentProfile.display_name||currentProfile.email;
     $('sessionRole').textContent='';
     s.classList.add('show');
     $('adminBtn').style.display=currentProfile.role==='admin'?'inline-block':'none';
+
+    const isAdmin=currentProfile.role==='admin';
+    const allowOnsite=isAdmin||currentAccess.allow_onsite===true;
+    const allowPremises=isAdmin||currentAccess.allow_office===true||currentAccess.allow_warehouse===true;
+
+    if(onsiteBtn) onsiteBtn.classList.toggle('module-hidden',!allowOnsite);
+    if(premisesBtn) premisesBtn.classList.toggle('module-hidden',!allowPremises);
+
+    if(!allowOnsite&&!allowPremises){
+      status('readyStatus','No inspection access has been assigned to this account. Contact the App Administrator.');
+    }
   }else{
     s.classList.remove('show');
     $('adminBtn').style.display='none';
+    if(onsiteBtn) onsiteBtn.classList.add('module-hidden');
+    if(premisesBtn) premisesBtn.classList.add('module-hidden');
   }
 }
 
@@ -754,6 +884,111 @@ async function loadOwnProfile(record=false){
   return profile;
 }
 
+
+async function loadOwnAccess(){
+  const isAdmin=currentProfile?.role==='admin';
+  if(isAdmin){
+    accessTableAvailable=true;
+    return {allow_onsite:true,allow_office:true,allow_warehouse:true};
+  }
+
+  const userId=String(currentProfile?.id||'');
+  if(!userId)return {allow_onsite:false,allow_office:false,allow_warehouse:false};
+
+  const {data,error}=await supabase
+    .from('safety_access')
+    .select('allow_onsite,allow_office,allow_warehouse')
+    .eq('user_id',userId)
+    .maybeSingle();
+
+  if(error){
+    // Safe fallback during staged installation: existing users retain On-Site,
+    // while KVI Premises stays closed until the access migration is installed.
+    console.warn('Safety access table unavailable:',error);
+    accessTableAvailable=false;
+    return {allow_onsite:true,allow_office:false,allow_warehouse:false};
+  }
+
+  accessTableAvailable=true;
+  return {
+    allow_onsite:data?.allow_onsite===true,
+    allow_office:data?.allow_office===true,
+    allow_warehouse:data?.allow_warehouse===true
+  };
+}
+
+function canOpenOnsite(){
+  return currentProfile?.role==='admin'||currentAccess.allow_onsite===true;
+}
+
+function canOpenPremises(){
+  return currentProfile?.role==='admin'||currentAccess.allow_office===true||currentAccess.allow_warehouse===true;
+}
+
+function buildIdentity(){
+  const displayName=String(currentProfile?.display_name||'').trim();
+  const role=String(currentProfile?.role||'user').trim().toLowerCase();
+
+  if(role!=='admin'&&!displayName){
+    throw new Error('The user profile is missing a full name. Contact the App Administrator.');
+  }
+
+  return {
+    userId:String(currentProfile?.id||''),
+    displayName,
+    email:String(currentProfile?.email||''),
+    role,
+    access:{
+      onsite:role==='admin'||currentAccess.allow_onsite===true,
+      office:role==='admin'||currentAccess.allow_office===true,
+      warehouse:role==='admin'||currentAccess.allow_warehouse===true
+    }
+  };
+}
+
+async function openPrivateModule(fileName,label,allowed){
+  status('readyStatus','');
+
+  if(!allowed()){
+    status('readyStatus','Access to '+label+' has not been assigned to this account.');
+    return;
+  }
+
+  status('readyStatus','Opening '+label+'…',true);
+
+  const {data,error}=await supabase.storage
+    .from(MODULE_BUCKET)
+    .createSignedUrl(fileName,60);
+
+  if(error){
+    status('readyStatus','Unable to open '+label+': '+error.message);
+    return;
+  }
+
+  try{
+    const r=await fetch(data.signedUrl);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+
+    let html=await r.text();
+    const identity=buildIdentity();
+    const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\u003c');
+    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';</scr'+'ipt>';
+
+    if(html.includes('</head>')){
+      html=html.replace('</head>',identityScript+'</head>');
+    }else{
+      html=identityScript+html;
+    }
+
+    document.documentElement.classList.remove('login-locked');
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(err){
+    status('readyStatus','Unable to load '+label+': '+(err.message||err));
+  }
+}
+
 $('login').onclick=async()=>{
   status('loginStatus','');
 
@@ -773,6 +1008,7 @@ $('login').onclick=async()=>{
     if(error)throw error;
 
     currentProfile=await loadOwnProfile(true);
+    currentAccess=await loadOwnAccess();
     $('password').value='';
     updateSession();
     show('readyCard');
@@ -789,6 +1025,7 @@ $('login').onclick=async()=>{
 $('logout').onclick=async()=>{
   await supabase.auth.signOut();
   currentProfile=null;
+  currentAccess={allow_onsite:true,allow_office:false,allow_warehouse:false};
   $('ownNewPassword').value='';
   $('ownConfirmPassword').value='';
   status('passwordStatus','');
@@ -796,59 +1033,17 @@ $('logout').onclick=async()=>{
   show('loginCard');
 };
 
-$('startApp').onclick=async()=>{
-  status('readyStatus','Opening Safety Walk…',true);
+$('onsiteAppBtn').onclick=()=>openPrivateModule(
+  ONSITE_APP_FILE,
+  'On-Site',
+  canOpenOnsite
+);
 
-  const {data,error}=await supabase.storage
-    .from(APP_BUCKET)
-    .createSignedUrl(APP_FILE,60);
-
-  if(error){
-    status('readyStatus','Unable to open Safety Walk: '+error.message);
-    return;
-  }
-
-  try{
-    const r=await fetch(data.signedUrl);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-
-    let html=await r.text();
-
-    // Pass the authenticated Safety Walk identity into the private app.
-    // Normal users are tied to their full profile name in PERFORMED BY.
-    // Administrators remain exempt and can edit PERFORMED BY normally.
-    const displayName=String(currentProfile?.display_name||'').trim();
-    const role=String(currentProfile?.role||'user').trim().toLowerCase();
-
-    if(role!=='admin' && !displayName){
-      status('readyStatus','Unable to start Safety Walk: the user profile is missing a full name. Contact the APP administrator.');
-      return;
-    }
-
-    const identity={
-      userId:String(currentProfile?.id||''),
-      displayName,
-      email:String(currentProfile?.email||''),
-      role
-    };
-
-    const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\u003c');
-    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';</scr'+'ipt>';
-
-    if(html.includes('</head>')){
-      html=html.replace('</head>',identityScript+'</head>');
-    }else{
-      html=identityScript+html;
-    }
-
-    document.documentElement.classList.remove('login-locked');
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(err){
-    status('readyStatus','Unable to load Safety Walk: '+err.message);
-  }
-};
+$('kviPremisesBtn').onclick=()=>openPrivateModule(
+  KVI_APP_FILE,
+  'KVI Premises',
+  canOpenPremises
+);
 
 
 $('changePasswordBtn').onclick=()=>{
@@ -1028,8 +1223,64 @@ async function refreshUsers(){
     return;
   }
 
-  renderUsers(data||[]);
-  status('adminStatus','');
+  const {data:accessRows,error:accessError}=await supabase
+    .from('safety_access')
+    .select('user_id,allow_onsite,allow_office,allow_warehouse');
+
+  if(accessError){
+    console.warn('Unable to load safety_access:',accessError);
+    accessTableAvailable=false;
+  }else{
+    accessTableAvailable=true;
+  }
+
+  const accessMap=new Map((accessRows||[]).map(row=>[
+    row.user_id,
+    {
+      allow_onsite:row.allow_onsite===true,
+      allow_office:row.allow_office===true,
+      allow_warehouse:row.allow_warehouse===true
+    }
+  ]));
+
+  const users=(data||[]).map(u=>({
+    ...u,
+    access:u.role==='admin'
+      ? {allow_onsite:true,allow_office:true,allow_warehouse:true}
+      : (accessMap.get(u.id)||{allow_onsite:true,allow_office:false,allow_warehouse:false})
+  }));
+
+  renderUsers(users);
+
+  if(accessError){
+    status('adminStatus','Users loaded. Inspection Access is in safe fallback mode until the access migration is installed.');
+  }else{
+    status('adminStatus','');
+  }
+}
+
+async function saveUserAccess(userId,nextAccess,options={}){
+  const payload={
+    user_id:userId,
+    allow_onsite:nextAccess.allow_onsite===true,
+    allow_office:nextAccess.allow_office===true,
+    allow_warehouse:nextAccess.allow_warehouse===true,
+    updated_at:new Date().toISOString()
+  };
+
+  const {error}=await supabase
+    .from('safety_access')
+    .upsert(payload,{onConflict:'user_id'});
+
+  if(error){
+    accessTableAvailable=false;
+    if(!options.quiet) status('adminStatus','Unable to save Inspection Access: '+error.message);
+    throw error;
+  }
+
+  accessTableAvailable=true;
+  if(!options.quiet) status('adminStatus','Inspection Access updated.',true);
+  return payload;
 }
 
 function renderUsers(users){
@@ -1041,19 +1292,94 @@ function renderUsers(users){
     row.className='user'+(u.active?'':' disabled');
 
     const info=document.createElement('div');
+    info.className='user-info';
     info.innerHTML=
       '<strong>'+esc(u.display_name||u.email)+'</strong>'+
       '<small>'+esc(u.email)+' · '+(u.role==='admin'?'Administrator':'User')+(u.active?'':' · Deactivated')+'</small>'+
       '<small><b>Last login:</b> '+esc(fmt(u.last_login_at))+'</small>'+
       '<small><b>Login count:</b> '+Number(u.login_count||0)+'</small>';
 
+    const accessBox=document.createElement('div');
+    accessBox.className='user-access';
+
+    const title=document.createElement('span');
+    title.className='user-access-title';
+    title.textContent='Inspection Access';
+    accessBox.appendChild(title);
+
+    const accessOptions=document.createElement('div');
+    accessOptions.className='access-options';
+
+    const accessDefs=[
+      ['allow_onsite','On-Site'],
+      ['allow_office','Office Facility'],
+      ['allow_warehouse','Warehouse Facility']
+    ];
+
+    const accessInputs={};
+
+    for(const [key,labelText] of accessDefs){
+      const label=document.createElement('label');
+      label.className='access-option';
+
+      const input=document.createElement('input');
+      input.type='checkbox';
+      input.checked=u.role==='admin'?true:u.access?.[key]===true;
+      input.disabled=u.role==='admin'||!accessTableAvailable||!u.active;
+      input.dataset.accessKey=key;
+
+      const span=document.createElement('span');
+      span.textContent=labelText;
+
+      label.appendChild(input);
+      label.appendChild(span);
+      accessOptions.appendChild(label);
+      accessInputs[key]=input;
+    }
+
+    accessBox.appendChild(accessOptions);
+
+    const accessNote=document.createElement('div');
+    accessNote.className='user-access-note';
+    accessNote.textContent=u.role==='admin'
+      ? 'Administrators have full inspection access.'
+      : (!accessTableAvailable
+          ? 'Access migration not installed — On-Site fallback only.'
+          : 'KVI Premises is available when Office and/or Warehouse is selected.');
+    accessBox.appendChild(accessNote);
+
+    if(u.role!=='admin'&&accessTableAvailable&&u.active){
+      Object.values(accessInputs).forEach(input=>{
+        input.addEventListener('change',async()=>{
+          const next={
+            allow_onsite:accessInputs.allow_onsite.checked,
+            allow_office:accessInputs.allow_office.checked,
+            allow_warehouse:accessInputs.allow_warehouse.checked
+          };
+
+          Object.values(accessInputs).forEach(i=>i.disabled=true);
+          try{
+            await saveUserAccess(u.id,next);
+          }catch{
+            // Restore from the last confirmed value on failure.
+            accessInputs.allow_onsite.checked=u.access?.allow_onsite===true;
+            accessInputs.allow_office.checked=u.access?.allow_office===true;
+            accessInputs.allow_warehouse.checked=u.access?.allow_warehouse===true;
+          }finally{
+            Object.values(accessInputs).forEach(i=>i.disabled=false);
+          }
+        });
+      });
+    }
+
+    info.appendChild(accessBox);
+
     const acts=document.createElement('div');
     acts.className='actions';
 
     const isSelf=u.id===currentProfile?.id;
 
-    // Ordinary active users can be promoted to Administrator.
-    if(u.role!=='admin' && u.active){
+    if(u.role!=='admin'&&u.active){
       const a=document.createElement('button');
       a.className='promote-admin';
       a.textContent='Make Admin';
@@ -1061,7 +1387,7 @@ function renderUsers(users){
         const name=u.display_name||u.email;
         if(confirm(
           'Promote '+name+' to Administrator?\n\n'+
-          'This gives the user full User Management access.'
+          'This gives the user full User Management and inspection access.'
         )){
           adminAction(
             {action:'promote_admin',user_id:u.id},
@@ -1072,8 +1398,6 @@ function renderUsers(users){
       acts.appendChild(a);
     }
 
-    // Every OTHER account — User or Administrator — can be activated/deactivated.
-    // The currently signed-in Administrator is protected from self-deactivation.
     if(!isSelf){
       const t=document.createElement('button');
       t.className=u.active?'warning':'secondary';
@@ -1082,7 +1406,6 @@ function renderUsers(users){
       acts.appendChild(t);
     }
 
-    // Password reset is available for every account.
     const p=document.createElement('button');
     p.className='secondary';
     p.textContent='Reset Password';
@@ -1100,8 +1423,6 @@ function renderUsers(users){
     };
     acts.appendChild(p);
 
-    // Every OTHER account — User or Administrator — can be deleted.
-    // The currently signed-in Administrator is protected from self-deletion.
     if(!isSelf){
       const d=document.createElement('button');
       d.className='danger';
@@ -1160,6 +1481,11 @@ $('createUser').onclick=async()=>{
   const display_name=$('newName').value.trim();
   const email=$('newEmail').value.trim().toLowerCase();
   const password=$('newPassword').value;
+  const requestedAccess={
+    allow_onsite:$('newAccessOnsite').checked,
+    allow_office:$('newAccessOffice').checked,
+    allow_warehouse:$('newAccessWarehouse').checked
+  };
 
   if(!display_name||!email||password.length<8){
     status('adminStatus','Enter a name and email address. The password must contain at least 8 characters.');
@@ -1169,10 +1495,36 @@ $('createUser').onclick=async()=>{
   await adminAction(
     {action:'create',display_name,email,password},
     async()=>{
+      let accessSaved=false;
+
+      try{
+        const {data:createdProfile,error:profileError}=await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email',email)
+          .single();
+
+        if(profileError)throw profileError;
+        await saveUserAccess(createdProfile.id,requestedAccess,{quiet:true});
+        accessSaved=true;
+      }catch(err){
+        console.warn('User created but inspection access could not be saved:',err);
+      }
+
       $('newName').value='';
       $('newEmail').value='';
       $('newPassword').value='';
+      $('newAccessOnsite').checked=true;
+      $('newAccessOffice').checked=false;
+      $('newAccessWarehouse').checked=false;
+
       await refreshUsers();
+
+      if(accessSaved){
+        status('adminStatus','User created and Inspection Access saved.',true);
+      }else{
+        status('adminStatus','User created. Review Inspection Access before use.');
+      }
     }
   );
 };
@@ -1187,11 +1539,13 @@ async function boot(){
 
   try{
     currentProfile=await loadOwnProfile(false);
+    currentAccess=await loadOwnAccess();
     updateSession();
     show('readyCard');
   }catch{
     await supabase.auth.signOut();
     currentProfile=null;
+    currentAccess={allow_onsite:true,allow_office:false,allow_warehouse:false};
     updateSession();
     show('loginCard');
   }
