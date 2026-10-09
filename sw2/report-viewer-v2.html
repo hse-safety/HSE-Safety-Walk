@@ -33,10 +33,11 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 import { sw2Client, approvalApi } from './auth.mjs';
 import { readCarrierHtml, decryptHtml, encryptHtml, buildCarrierHtml } from './report-core.mjs';
 const $=id=>document.getElementById(id);
-let currentFrame=null, timer=null, busy=false;
+let currentFrame=null, timer=null, busy=false, accessEpoch=0;
 const show=(id,yes)=>{$(id).hidden=!yes;};
 const notice=text=>{$('notice').textContent=text||'';};
 function closeReport(){
+  accessEpoch++;
   clearInterval(timer);timer=null;
   if(currentFrame){currentFrame.removeAttribute('srcdoc');currentFrame.src='about:blank';currentFrame=null;}
   $('viewerScreen').hidden=true;$('workplace').hidden=false;
@@ -61,15 +62,19 @@ $('logout').onclick=async()=>{closeReport();await sw2Client.auth.signOut();$('re
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
 async function verify(){await approvalApi('status');}
-function revoke(){closeReport();notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
+function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
 $('openReport').onclick=async()=>{
- if(busy)return;busy=true;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
+ if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
  try{
   const file=$('reportFile').files?.[0];if(!file)throw Error('Vælg en krypteret HTML-fil.');
   if(file.size>140_000_000)throw Error('Filen er for stor.');
   const pkg=readCarrierHtml(await file.text());
   const {key_b64}=await approvalApi('open',{report_id:pkg.id});
   const clear=await decryptHtml(pkg,key_b64);
+  // Never reveal a report if the user logged out or the viewer was locked while the request was pending.
+  if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
+  await verify();
+  if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
   if(!/^<!doctype html>|<html/i.test(clear.trim()))throw Error('Ugyldigt rapportindhold.');
   const frame=$('inspectionFrame');currentFrame=frame;
   // Report iframe has an opaque origin. It cannot read viewer auth tokens.
@@ -78,7 +83,7 @@ $('openReport').onclick=async()=>{
   frame.srcdoc=framed;
   $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
   $('viewerStatus').textContent='Safety Walk – Godkendt';
-  timer=setInterval(async()=>{try{await verify();}catch{revoke();}},15000);
+  timer=setInterval(async()=>{if(!currentFrame)return;const epoch=accessEpoch;try{await verify();if(epoch!==accessEpoch)return;}catch{if(epoch===accessEpoch)revoke();}},15000);
  }catch(e){closeReport();notice(e.message||'Rapporten kunne ikke åbnes.');}
  finally{busy=false;$('openReport').disabled=!$('reportFile').files?.length;}
 };
@@ -88,11 +93,13 @@ document.addEventListener('visibilitychange',async()=>{if(document.visibilitySta
 window.addEventListener('message',async event=>{
  if(!currentFrame||event.source!==currentFrame.contentWindow||event.data?.type!=='sw2-save-request'||busy)return;
  const html=event.data.html;if(typeof html!=='string'||html.length>140_000_000)return;
+ const saveEpoch=accessEpoch;
  busy=true;
  try{
   await verify();
   const {package:pkg,key}=await encryptHtml(html);
   await approvalApi('register',{report_id:pkg.id,key_b64:key});
+  if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
   const carrier=buildCarrierHtml(pkg,location.href);
   const object=URL.createObjectURL(new Blob([carrier],{type:'text/html'}));
   const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk – Krypteret.html';document.body.append(a);a.click();a.remove();
