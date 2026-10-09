@@ -1,16 +1,21 @@
-// Safety Walk 2.0: pure adapter for the private HTML module loaded after existing login.
-// Important: this must be called in safety-login.html AFTER the existing signed-URL fetch.
-// Do NOT use it on the public 1.0 login or on unrelated modules.
-const SECURE_EXPORT = '<script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></'+'script>';
-const APPROVAL_GATE = '<script type="module" data-sw2-app-gate src="./sw2/app-approval-gate.mjs"></'+'script>';
-export function prepareOnsitePrivateModule(html) {
-  if (typeof html !== 'string' || !/<html[\s>]/i.test(html)) throw new TypeError('Invalid private module HTML');
-  if (!/<\/body>/i.test(html)) throw new Error('Private module missing body');
-  // Avoid double installation after user clicks the module again.
-  if (html.includes('data-sw2-secure-export')) throw new Error('SW2 module is already integrated');
-  return html.replace(/<\/body>/i, APPROVAL_GATE + SECURE_EXPORT + '</body>');
+// SW2 staging adapter for Safety Walk's existing authenticated loader.
+// Verified from the saved HSE-Safety-Walk-Desktop-Login.html:
+// Existing login uses the production Supabase Auth session, fetches a signed
+// URL for safety-app/app-v137.html, then document.open/write/close.
+// It does NOT load safety-modules/onsite-v1.0.html for this button.
+const ADDONS = [
+  '<script type="module" data-sw2-app-gate src="./sw2/app-approval-gate.mjs"></'+'script>',
+  '<script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></'+'script>'
+];
+export function prepareSafetyWalkAppHtml(html) {
+  if(typeof html!=='string'||!/<html[\\s>]/i.test(html)||!/<\\/body>/i.test(html))
+    throw new Error('Invalid Safety Walk app HTML');
+  if(html.includes('data-sw2-secure-export')) throw new Error('This module already has SW2 integration');
+  return html.replace(/<\\/body>/i,ADDONS.join('')+'</body>');
 }
-// Integration site in safety-login.html:
-//   let html = await r.text();
-//   if (fileName === ONSITE_APP_FILE) html = prepareOnsitePrivateModule(html);
-// Keep the existing profile, module-access check, identity and document.write flow intact.
+// Intended integration point in the *actual existing login source*, following
+// the successful signed URL fetch; retain existing login, profile checks and UI:
+// const html = prepareSafetyWalkAppHtml(await r.text());
+// document.open(); document.write(html); document.close();
+// No installation may proceed until the real safety-login.html source is
+// restored from a verified live/archived version; GitHub's copy is empty.
