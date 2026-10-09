@@ -4,7 +4,7 @@
 // Deploy the FULL reviewed, modified app-v137.html as a new private 2.0
 // storage object and point the verified login loader at it only on release.
 export function prepareSafetyWalkAppHtml(html) {
-  if (typeof html !== 'string' || !/<html[\\s>]/i.test(html) || !/<\\/body>/i.test(html)) {
+  if (typeof html !== 'string' || !/<html[\s>]/i.test(html) || !/<\/body>/i.test(html)) {
     throw new Error('Invalid Safety Walk app HTML');
   }
   const native2 = html.includes('data-safety-walk-version="2.0-staging"') &&
