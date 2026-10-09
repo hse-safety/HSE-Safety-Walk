@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Safety Walk 2.0 – Beskyttede rapporter</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#173048;background:#f1f5f8}*{box-sizing:border-box}body{margin:0}
+header{background:#09375b;color:white;padding:15px 24px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header button{color:#09375b;background:#fff;border:0;border-radius:7px;padding:9px 14px;cursor:pointer}
+main{max-width:840px;margin:28px auto;padding:0 18px}.panel{padding:24px;border:1px solid #ccd9e5;background:white;border-radius:12px;margin-bottom:14px}
+label{display:block;margin:14px 0 6px}input{display:block;width:100%;padding:12px;border:1px solid #aebed0;border-radius:7px}
+button.primary{background:#09676c;color:white;border:0;border-radius:7px;padding:13px 20px;margin-top:16px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
+#viewerScreen[hidden],#loginScreen[hidden],#pickScreen[hidden]{display:none!important}
+#viewerScreen{height:calc(100vh - 65px);display:flex;flex-direction:column}
+#viewerHeader{padding:10px 15px;background:#e5f0f4;display:flex;justify-content:space-between;align-items:center}
+#inspectionFrame{width:100%;flex:1;border:0;background:#fff}
+</style></head><body>
+<header><strong>SAFETY WALK 2.0 – Beskyttet rapport</strong><button type="button" id="logout">Log ud</button></header>
+<main id="workplace">
+<section class="panel" id="loginScreen"><h1>Kun godkendte brugere</h1><form id="loginForm">
+<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+<label for="password">Adgangskode</label><input id="password" type="password" autocomplete="current-password" required>
+<button class="primary" type="submit">Log ind</button></form></section>
+<section class="panel" id="pickScreen" hidden><h1>Åbn krypteret inspektion</h1>
+<p>Vælg den HTML-rapport, du har modtaget via AirDrop eller e-mail.</p>
+<input id="reportFile" type="file" accept=".html,text/html">
+<button id="openReport" class="primary" type="button" disabled>Åbn efter godkendelse</button>
+<p>Onlinegodkendelse kræves. Rapportens indhold uploades ikke til serveren.</p></section>
+<div id="notice" role="status" aria-live="polite"></div></main>
+<section id="viewerScreen" hidden><div id="viewerHeader"><span id="viewerStatus">Godkendt rapport</span>
+<button type="button" id="closeReport">Luk rapport</button></div>
+<iframe id="inspectionFrame" title="Safety Walk-inspektion" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
+<script type="module">
+import { sw2Client, approvalApi } from './auth.mjs';
+import { readCarrierHtml, decryptHtml, encryptHtml, buildCarrierHtml } from './report-core.mjs';
+const $=id=>document.getElementById(id);
+let currentFrame=null, timer=null, busy=false;
+const show=(id,yes)=>{$(id).hidden=!yes;};
+const notice=text=>{$('notice').textContent=text||'';};
+function closeReport(){
+  clearInterval(timer);timer=null;
+  if(currentFrame){currentFrame.removeAttribute('srcdoc');currentFrame.src='about:blank';currentFrame=null;}
+  $('viewerScreen').hidden=true;$('workplace').hidden=false;
+}
+async function checkSession(){
+  closeReport();$('workplace').hidden=false;
+  try{
+    const {data:{user}}=await sw2Client.auth.getUser();
+    if(!user)throw Error('Log ind for at åbne en rapport.');
+    await approvalApi('status');show('loginScreen',false);show('pickScreen',true);
+    notice('Godkendt. Vælg en krypteret rapport.');
+  }catch(error){show('loginScreen',true);show('pickScreen',false);notice(error.message);}
+}
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();notice('Kontrollerer godkendelse…');
+ const {error}=await sw2Client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+ $('password').value='';
+ if(error){notice('Login mislykkedes.');return;}
+ await checkSession();
+});
+$('logout').onclick=async()=>{closeReport();await sw2Client.auth.signOut();$('reportFile').value='';await checkSession();};
+$('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
+$('closeReport').onclick=closeReport;
+async function verify(){await approvalApi('status');}
+function revoke(){closeReport();notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
+$('openReport').onclick=async()=>{
+ if(busy)return;busy=true;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
+ try{
+  const file=$('reportFile').files?.[0];if(!file)throw Error('Vælg en krypteret HTML-fil.');
+  if(file.size>140_000_000)throw Error('Filen er for stor.');
+  const pkg=readCarrierHtml(await file.text());
+  const {key_b64}=await approvalApi('open',{report_id:pkg.id});
+  const clear=await decryptHtml(pkg,key_b64);
+  if(!/^<!doctype html>|<html/i.test(clear.trim()))throw Error('Ugyldigt rapportindhold.');
+  const frame=$('inspectionFrame');currentFrame=frame;
+  // Report iframe has an opaque origin. It cannot read viewer auth tokens.
+  // This flag is used by the original SEND function to hand a revised report to its trusted parent.
+  const framed=clear.replace(/<head([^>]*)>/i,'<head$1><script>window.__SW2_VIEWER_FRAME=true;<\\/script>');
+  frame.srcdoc=framed;
+  $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
+  $('viewerStatus').textContent='Safety Walk – Godkendt';
+  timer=setInterval(async()=>{try{await verify();}catch{revoke();}},15000);
+ }catch(e){closeReport();notice(e.message||'Rapporten kunne ikke åbnes.');}
+ finally{busy=false;$('openReport').disabled=!$('reportFile').files?.length;}
+};
+for(const evt of ['online'])window.addEventListener(evt,async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
+window.addEventListener('offline',()=>{if(currentFrame)revoke();});
+document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&currentFrame){try{await verify();}catch{revoke();}}});
+window.addEventListener('message',async event=>{
+ if(!currentFrame||event.source!==currentFrame.contentWindow||event.data?.type!=='sw2-save-request'||busy)return;
+ const html=event.data.html;if(typeof html!=='string'||html.length>140_000_000)return;
+ busy=true;
+ try{
+  await verify();
+  const {package:pkg,key}=await encryptHtml(html);
+  await approvalApi('register',{report_id:pkg.id,key_b64:key});
+  const carrier=buildCarrierHtml(pkg,location.href);
+  const object=URL.createObjectURL(new Blob([carrier],{type:'text/html'}));
+  const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk – Krypteret.html';document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(object),8000);
+  $('viewerStatus').textContent='Ændret krypteret rapport downloadet';
+ }catch(error){$('viewerStatus').textContent='Rapporten blev ikke gemt: '+error.message;}
+ finally{busy=false;}
+});
+await checkSession();
+</script></body></html>
