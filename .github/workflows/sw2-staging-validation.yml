@@ -42,3 +42,18 @@ jobs:
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
           test -s onsite-v2.0.html
           test -f safety-login.html
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright Chromium
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Open and revoke encrypted report in browser
+        run: python tests/test-sw2-browser.py
