@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- iPhone v152 generated from the existing iPhone app template; current agreed corrections ported from HSE Safety Walk(6).html. The uploaded master file was not modified. -->
-<html lang="da" data-safety-walk-version="2.0-staging"><head>
+<html lang="da" data-safety-walk-version="2.0-staging"><head><style data-sw2-preauth>html:not(.sw2-approved) body{visibility:hidden!important}html:not(.sw2-approved)::after{content:"Safety Walk 2.0 – adgang kontrolleres";position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:#f4f6f7;color:#173048;font:600 18px system-ui;text-align:center;padding:24px}html.sw2-denied::after{content:"Safety Walk 2.0 – adgang afvist. Kontakt administrator."}</style>
 <meta content="text/html; charset=utf-8" http-equiv="content-type">
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -8112,7 +8112,7 @@ html.apple-mobile-ui #printFriendlyBtn {
 
         const clone = document.documentElement.cloneNode(true);
         // Module loader is not part of the portable inspection snapshot.
-        clone.querySelectorAll('script[data-sw2-secure-export],script[data-sw2-app-gate]').forEach(el => el.remove());
+        clone.querySelectorAll('script[data-sw2-secure-export],script[data-sw2-app-gate],style[data-sw2-preauth]').forEach(el => el.remove());
         syncStandaloneSnapshotState(document.documentElement, clone);
 
         // Give the transferred audit its own persistent desktop draft key. This
