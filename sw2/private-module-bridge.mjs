@@ -1,21 +1,17 @@
-// SW2 staging adapter for Safety Walk's existing authenticated loader.
-// Verified from the saved HSE-Safety-Walk-Desktop-Login.html:
-// Existing login uses the production Supabase Auth session, fetches a signed
-// URL for safety-app/app-v137.html, then document.open/write/close.
-// It does NOT load safety-modules/onsite-v1.0.html for this button.
-const ADDONS = [
-  '<script type="module" data-sw2-app-gate src="./sw2/app-approval-gate.mjs"></'+'script>',
-  '<script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></'+'script>'
-];
+// Safety Walk 2.0 staging: guard the existing private app loader.
+// This helper refuses to retrofit the old 1.0 module: injecting a script
+// does not alter 1.0's SEND handler and would permit cleartext exports.
+// Deploy the FULL reviewed, modified app-v137.html as a new private 2.0
+// storage object and point the verified login loader at it only on release.
 export function prepareSafetyWalkAppHtml(html) {
-  if(typeof html!=='string'||!/<html[\s>]/i.test(html)||!/<\/body>/i.test(html))
+  if (typeof html !== 'string' || !/<html[\\s>]/i.test(html) || !/<\\/body>/i.test(html)) {
     throw new Error('Invalid Safety Walk app HTML');
-  if(html.includes('data-sw2-secure-export')) throw new Error('This module already has SW2 integration');
-  return html.replace(/<\/body>/i,ADDONS.join('')+'</body>');
+  }
+  const native2 = html.includes('data-safety-walk-version="2.0-staging"') &&
+    html.includes('data-sw2-secure-export') &&
+    html.includes('SW2ReportExport.protectSnapshot(clearHtml)');
+  if (!native2) {
+    throw new Error('The private app module has not been updated to Safety Walk 2.0. No export allowed.');
+  }
+  return html;
 }
-// Intended integration point in the *actual existing login source*, following
-// the successful signed URL fetch; retain existing login, profile checks and UI:
-// const html = prepareSafetyWalkAppHtml(await r.text());
-// document.open(); document.write(html); document.close();
-// No installation may proceed until the real safety-login.html source is
-// restored from a verified live/archived version; GitHub's copy is empty.
