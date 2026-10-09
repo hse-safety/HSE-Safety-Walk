@@ -39,3 +39,9 @@ En UI-spærring er aldrig kopibeskyttelse i sig selv. Rapportfilen skal være AE
 - Staging-patcher i `sw2/prepare-login-v2.mjs` er nu målrettet denne konkrete loader og skifter kun On-Site til `onsite-v2.0.html`. Modulet SKAL reelt eksistere i sikker, gennemtestet form, før brugerne får en opdatering.
 - Kritisk: On-Site-kildeobjektet `onsite-v1.0.html` er endnu ikke hentet og sammenlignet med udviklingskoden. `app-v137.html` på GitHub kan ikke antages at være identisk med det private aktive On-Site-modul.
 - Ingen ændringer i produktionens Storage, Edge Functions eller GitHub main er gennemført.
+
+## Staging-kandidat fra aktuel live-login (2026-10-09)
+- Separat `safety-login-v2.0-STAGING.html` er bygget lokalt fra brugerens aktuelle upload, og `onsite-v2.0-STAGING.html` er bygget fra den aktuelle private On-Site-kilde. Begge er syntakskontrolleret; ingen installation foretaget.
+- Login-diff: præcis én On-Site-filreference opdateret fra `onsite-v1.0.html` til `onsite-v2.0.html`, plus fail-closed verifikation efter signed URL fetch. KVI-ændringer: ingen.
+- **Kritisk:** Den foreslåede login-kandidat bruger eksisterende PRODUKTION Auth, mens `sw2/config.mjs` endnu bruger TEST-projekt. Adgangskontrol vil derfor IKKE dele session og kan ikke udgives før samme produktions-Supabase anvendes i hele kæden, og produktionsnøglefunktionen er installeret med særskilt nøglemateriale.
+- Rapportåbner og privat On-Site-modul skal gennemgå et samlet iPhone → krypteret HTML → Mac → gemning/PDF-forløb på preview uden ændringer i eksisterende 1.0.
