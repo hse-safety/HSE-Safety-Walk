@@ -1,0 +1,43 @@
+name: Safety Walk 2.0 staging tests
+on:
+  push:
+    branches:
+      - safety-walk-2-secure-html-staging
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check new JS modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in sw2/*.mjs tests/test-sw2-*.mjs; do node --check "$f"; done
+      - name: Run SW2 staging regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in tests/test-sw2-*.mjs; do
+            echo "Running $f"
+            node "$f"
+          done
+      - name: Ensure production config is not active in staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
+          grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
+          test -s onsite-v2.0.html
+          test ! -s safety-login.html
