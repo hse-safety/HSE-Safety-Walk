@@ -25,3 +25,9 @@ En UI-spærring er aldrig kopibeskyttelse i sig selv. Rapportfilen skal være AE
 - Den private inspektionsmoduls faktiske kildekode samt login-loader skal fremskaffes via en godkendt eksport eller konnektor med Storage-filadgang. Indtil da er `private-module-bridge.mjs` kun forberedende og må ikke installeres i produktionen.
 - Supabase TEST og produktion har forskellige brugerkonti og sessioner. Testmiljøets API-nøgle og brugerprofil må ikke forveksles med produktionens eksisterende User Management.
 - Vigtig frigivelseskontrol: En krypteret HTML-rapport skal åbnes af **alle aktive/godkendte brugere**, ikke kun den oprindelige inspektør; testen skal omfatte tilbagekaldelse af godkendelse.
+
+## Ny dokumenteret login-reference
+- En tidligere gemt fil `HSE-Safety-Walk-Desktop-Login.html` viser konkret login med `supabase.auth.signInWithPassword`, kontrol af `profiles.active`, et privat signed URL-kald til `safety-app/app-v137.html`, samt `document.open/write/close`.
+- Den korrekte bro er derfor at opdatere loaderen umiddelbart efter den signerede download af **app-v137.html** — ikke et modul i `safety-modules`.
+- Loginfilen er en ældre kopi (2026-08-22) og er **ikke verificeret som identisk med den aktuelt installerede login-side**. Brug ikke filen til blind produktionsoverskrivning.
+- Det aktuelle GitHub-login er fortsat tomt. Før udgivelse skal den faktiske aktive login-kilde indhentes/valideres og versionsstyres på STAGING, før 2.0-ændringer kobles på.
