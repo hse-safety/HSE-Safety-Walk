@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { prepareOnsitePrivateModule } from '../sw2/private-module-bridge.mjs';
+import { prepareSafetyWalkAppHtml } from '../sw2/private-module-bridge.mjs';
 const html='<!doctype html><html><head></head><body><button>SEND</button></body></html>';
-const result=prepareOnsitePrivateModule(html);
+const result=prepareSafetyWalkAppHtml(html);
 assert.equal((result.match(/data-sw2-secure-export/g)||[]).length,1);
 assert.equal((result.match(/data-sw2-app-gate/g)||[]).length,1);
 assert.match(result,/<button>SEND<\/button>/);
-assert.throws(()=>prepareOnsitePrivateModule(result));
-assert.throws(()=>prepareOnsitePrivateModule('<html></html>'));
+assert.throws(()=>prepareSafetyWalkAppHtml(result));
+assert.throws(()=>prepareSafetyWalkAppHtml('<html></html>'));
 console.log('SW2 private module bridge structural tests passed');
