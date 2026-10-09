@@ -8097,6 +8097,12 @@ html.apple-mobile-ui #printFriendlyBtn {
         // SW2 staging: export must be encrypted before any share/download.
         // If approval/key registration fails, no report file is produced.
         const fileName = buildAirDropFileName();
+        // When editing inside the trusted 2.0 viewer, SEND returns a snapshot to
+        // the parent so it can re-encrypt and register a fresh key.
+        if (window.__SW2_VIEWER_FRAME === true && window.parent !== window) {
+            window.parent.postMessage({ type: 'sw2-save-request', html: clearHtml }, '*');
+            return;
+        }
         const originalText = airDropBtn.textContent || 'SEND';
         airDropBtn.disabled = true;
         airDropBtn.textContent = 'Preparing…';
