@@ -5,7 +5,8 @@ import { createApprovalController } from './approval-controller.mjs';
 const root=document.documentElement;
 const style=document.createElement('style');
 style.textContent=`html:not(.sw2-approved) body { visibility: hidden !important; } 
-html.sw2-denied body { visibility: visible !important; pointer-events: none !important; filter: blur(8px); }`;
+html:not(.sw2-approved)::after { content: 'Safety Walk 2.0 – adgang kontrolleres'; position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #f4f6f7; color: #173048; font: 600 18px system-ui; text-align: center; padding: 24px; }
+html.sw2-denied::after { content: 'Adgang til Safety Walk 2.0 er ikke godkendt. Kontakt administrator.'; }`;
 document.head.append(style);
 const controller=createApprovalController({
  check:async()=>(await approvalApi('status')).approved===true,
