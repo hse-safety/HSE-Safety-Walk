@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {webcrypto} from 'node:crypto';
+import {verifyOfflineLease} from '../sw2/offline-lease.mjs';
+globalThis.crypto ??= webcrypto;
+const {publicKey,privateKey}=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+const jwk=await crypto.subtle.exportKey('jwk',publicKey);
+const enc=x=>Buffer.from(typeof x==='string'?x:JSON.stringify(x)).toString('base64url');
+const now=Date.now(),secs=Math.floor(now/1000);
+const data={aud:'safety-walk-2',sub:'user-1',device_id:'device-1',project_ref:'prod',iat:secs-10,nbf:secs-10,exp:secs+3600,authorized:true};
+async function sign(payload){const body=enc({alg:'ES256',typ:'SW2-OFFLINE-LEASE'})+'.'+enc(payload);const signature=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},privateKey,new TextEncoder().encode(body));return body+'.'+Buffer.from(signature).toString('base64url');}
+const opts={userId:'user-1',deviceId:'device-1',projectRef:'prod',now};
+const valid=await sign(data);
+assert.equal((await verifyOfflineLease(valid,jwk,opts)).deviceId,'device-1');
+await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,userId:'other'}));
+await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,deviceId:'other'}));
+await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,now:now+7200_000}));
+await assert.rejects(verifyOfflineLease(await sign({...data,exp:secs+90000}),jwk,opts));
+await assert.rejects(verifyOfflineLease(valid.replace(/.$/,valid.endsWith('A')?'B':'A'),jwk,opts));
+await assert.rejects(verifyOfflineLease(await sign({...data,authorized:false}),jwk,opts));
+console.log('SW2 offline signed lease verification tests passed');
