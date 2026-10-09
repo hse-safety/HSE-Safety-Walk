@@ -40,4 +40,4 @@ jobs:
           grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
           test -s onsite-v2.0.html
-          test ! -s safety-login.html
+          test -f safety-login.html
