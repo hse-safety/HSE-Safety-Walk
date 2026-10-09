@@ -26,3 +26,7 @@
 6. Confirm PWA cache propagation and prepare immediate rollback of the On-Site reference to v1.0.
 
 The backend migration alone is additive and does not activate Safety Walk 2.0 for users.
+
+## Preview fix 2026-10-09
+- `sw2-preview-cors` v2 deployed. It checks Supabase auth and `profiles.active` directly before serving On-Site 2.0; avoids broken `/sw2-preview/module` upstream (404).
+- Caveat: staging GitHub repository is public; its raw `onsite-v2.0.html` is publicly fetchable. This preview is suitable only for functional tests with non-sensitive test inspections. **It does not satisfy private-module anti-copy deployment requirements.** Before full release move On-Site into authenticated private Storage or packaged private edge assets. No confidential real inspections in preview.
