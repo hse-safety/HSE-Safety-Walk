@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+import { encryptHtml, decryptHtml, buildCarrierHtml, readCarrierHtml } from '../sw2/report-core.mjs';
+globalThis.crypto ??= webcrypto;
+const sample='<!doctype html><html lang="da"><head><title>Test</title></head><body><textarea>Æ Ø Å</textarea></body></html>';
+const {package:pkg,key}=await encryptHtml(sample);
+assert.equal(pkg.type,'sw2-encrypted-report-v1');
+const carrier=buildCarrierHtml(pkg,'https://example.com/sw2/report-viewer-v2.html');
+assert(!carrier.includes('<textarea>Æ Ø Å</textarea>'));
+assert(!carrier.includes(key),'Carrier must never contain the content key');
+const recovered=await decryptHtml(readCarrierHtml(carrier),key);
+assert.equal(recovered,sample,'Byte-for-byte UTF-8 content must survive');
+await assert.rejects(decryptHtml({...pkg,data:pkg.data.slice(0,-4)+'AAAA'},key));
+assert.throws(()=>readCarrierHtml(sample));
+console.log('SW2 report encryption/carrier round-trip passed');
