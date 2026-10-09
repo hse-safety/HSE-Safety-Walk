@@ -74,7 +74,7 @@ $('openReport').onclick=async()=>{
   const frame=$('inspectionFrame');currentFrame=frame;
   // Report iframe has an opaque origin. It cannot read viewer auth tokens.
   // This flag is used by the original SEND function to hand a revised report to its trusted parent.
-  const framed=clear.replace(/<head([^>]*)>/i,'<head$1><script>window.__SW2_VIEWER_FRAME=true;<\\/script>');
+  const framed=clear.replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
   frame.srcdoc=framed;
   $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
   $('viewerStatus').textContent='Safety Walk – Godkendt';
