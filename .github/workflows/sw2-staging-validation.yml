@@ -57,3 +57,6 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Open and revoke encrypted report in browser
         run: python tests/test-sw2-browser.py
+
+      - name: Validate live GitHub Pages preview and anonymous access denial
+        run: python tests/test-sw2-preview-online.py
