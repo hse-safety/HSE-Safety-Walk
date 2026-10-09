@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!DOCTYPE html>
 
-<html data-build="154" data-hse-build="v155" data-safety-walk-version="1.0" lang="da"><head>
+<html data-build="154" data-hse-build="v155" data-safety-walk-version="2.0-staging" lang="da"><head>
 <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -7858,7 +7858,8 @@ html.apple-mobile-ui #printFriendlyBtn {
 
             const fd = frame.contentDocument;
             fd.open();
-            fd.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>');
+            fd.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></script>
+</body></html>');
             fd.close();
 
             const baseStyle = fd.createElement('style');
@@ -8088,13 +8089,18 @@ html.apple-mobile-ui #printFriendlyBtn {
 
         // Build synchronously while the tap still counts as a user gesture in Safari.
         // The native share sheet keeps both Mail and AirDrop available.
-        const htmlText = buildStandaloneHtmlSnapshot();
+        const clearHtml = buildStandaloneHtmlSnapshot();
+        let htmlText = '';
+        // SW2 staging: export must be encrypted before any share/download.
+        // If approval/key registration fails, no report file is produced.
         const fileName = buildAirDropFileName();
         const originalText = airDropBtn.textContent || 'SEND';
         airDropBtn.disabled = true;
         airDropBtn.textContent = 'Preparing…';
 
         try {
+            if (!window.SW2ReportExport?.protectSnapshot) throw new Error('Safety Walk 2.0 encryption module unavailable.');
+            htmlText = await window.SW2ReportExport.protectSnapshot(clearHtml);
             let shareFile = new File([htmlText], fileName, { type: 'text/html' });
             let canShareFile = typeof navigator.share === 'function';
 
@@ -8123,6 +8129,7 @@ html.apple-mobile-ui #printFriendlyBtn {
             if (error?.name !== 'AbortError') {
                 console.error('Share error', error);
                 try {
+                    if (!htmlText) throw new Error('Encrypted report was not created.');
                     fallbackDownloadHtml(fileName, htmlText);
                     alert('The share sheet could not be opened directly. The completed HTML file has been downloaded instead; share it from Files.');
                 } catch (fallbackError) {
