@@ -8156,18 +8156,6 @@ html.apple-mobile-ui #printFriendlyBtn {
         setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
 
-    // Mac keeps PDF-only controls; the trusted report viewer handles encrypted Save.
-    window.addEventListener('message', event => {
-        if (window.__SW2_VIEWER_FRAME !== true || event.source !== window.parent ||
-            event.data?.type !== 'sw2-request-save') return;
-        try {
-            const html = buildStandaloneHtmlSnapshot();
-            window.parent.postMessage({type:'sw2-save-request', html}, '*');
-        } catch (error) {
-            window.parent.postMessage({type:'sw2-save-error', error:String(error?.message||error)}, '*');
-        }
-    });
-
     async function shareHtmlViaAirDrop() {
         if (!airDropBtn) return;
 
