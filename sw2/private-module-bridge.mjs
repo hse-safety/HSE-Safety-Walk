@@ -8,10 +8,10 @@ const ADDONS = [
   '<script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></'+'script>'
 ];
 export function prepareSafetyWalkAppHtml(html) {
-  if(typeof html!=='string'||!/<html[\\s>]/i.test(html)||!/<\\/body>/i.test(html))
+  if(typeof html!=='string'||!/<html[\s>]/i.test(html)||!/<\/body>/i.test(html))
     throw new Error('Invalid Safety Walk app HTML');
   if(html.includes('data-sw2-secure-export')) throw new Error('This module already has SW2 integration');
-  return html.replace(/<\\/body>/i,ADDONS.join('')+'</body>');
+  return html.replace(/<\/body>/i,ADDONS.join('')+'</body>');
 }
 // Intended integration point in the *actual existing login source*, following
 // the successful signed URL fetch; retain existing login, profile checks and UI:
