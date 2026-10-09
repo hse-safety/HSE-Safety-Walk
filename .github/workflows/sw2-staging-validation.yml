@@ -33,11 +33,12 @@ jobs:
             echo "Running $f"
             node "$f"
           done
-      - name: Ensure production config is not active in staging
+      - name: Ensure 2.0 staging uses same Supabase project as active login
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
+          grep -q 'hvgljbyethfwxajnrvvi' sw2/config.mjs
+          ! grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
           test -s onsite-v2.0.html
           test -f safety-login.html
