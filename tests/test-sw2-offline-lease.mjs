@@ -15,6 +15,6 @@ await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,userId:'other'}));
 await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,deviceId:'other'}));
 await assert.rejects(verifyOfflineLease(valid,jwk,{...opts,now:now+7200_000}));
 await assert.rejects(verifyOfflineLease(await sign({...data,exp:secs+90000}),jwk,opts));
-await assert.rejects(verifyOfflineLease(valid.replace(/.$/,valid.endsWith('A')?'B':'A'),jwk,opts));
+await assert.rejects(verifyOfflineLease(valid.slice(0,valid.lastIndexOf('.')+1)+(valid[valid.lastIndexOf('.')+1]==='A'?'B':'A')+valid.slice(valid.lastIndexOf('.')+2),jwk,opts));
 await assert.rejects(verifyOfflineLease(await sign({...data,authorized:false}),jwk,opts));
 console.log('SW2 offline signed lease verification tests passed');
