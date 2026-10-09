@@ -8041,6 +8041,9 @@ html.apple-mobile-ui #printFriendlyBtn {
         ensureAuditId();
 
         const clone = document.documentElement.cloneNode(true);
+        // SW2 staging: the exported standalone report must not load app-side
+        // encryption modules from a relative path inside the desktop viewer.
+        clone.querySelectorAll('script[data-sw2-secure-export]').forEach(node => node.remove());
         syncStandaloneSnapshotState(document.documentElement, clone);
 
         // Give the transferred audit its own persistent desktop draft key. This
