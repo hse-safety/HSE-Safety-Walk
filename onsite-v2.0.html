@@ -8112,7 +8112,7 @@ html.apple-mobile-ui #printFriendlyBtn {
 
         const clone = document.documentElement.cloneNode(true);
         // Module loader is not part of the portable inspection snapshot.
-        clone.querySelectorAll('script[data-sw2-secure-export]').forEach(el => el.remove());
+        clone.querySelectorAll('script[data-sw2-secure-export],script[data-sw2-app-gate]').forEach(el => el.remove());
         syncStandaloneSnapshotState(document.documentElement, clone);
 
         // Give the transferred audit its own persistent desktop draft key. This
@@ -8325,5 +8325,6 @@ if ('serviceWorker' in navigator) {
 </script>
 
 
+<script type="module" data-sw2-app-gate src="./sw2/app-approval-gate.mjs"></script>
 <script type="module" data-sw2-secure-export src="./sw2/secure-export.mjs"></script>
 </body></html>
