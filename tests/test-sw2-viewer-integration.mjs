@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const viewer=readFileSync(new URL('../sw2/report-viewer-v2.html',import.meta.url),'utf8');
-const app=readFileSync(new URL('../app-v137.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../onsite-v2.0.html',import.meta.url),'utf8');
 assert.match(viewer,/window\.__SW2_VIEWER_FRAME=true/);
 assert.match(viewer,/postMessage|addEventListener\('message'/);
-assert.match(app,/type: 'sw2-save-request', html: clearHtml/);
+assert.match(app,/type:\s*'sw2-save-request',\s*html:\s*clearHtml/);
 assert.match(app,/window\.SW2ReportExport\.protectSnapshot\(clearHtml\)/);
 assert.match(app,/if \(!htmlText\) throw new Error/);
 assert(!viewer.includes('window.__SW2_VIEWER_FRAME=true;<\\\\/script>'),'iframe bootstrap must use a real closing script tag');
