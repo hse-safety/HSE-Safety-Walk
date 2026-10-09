@@ -1,9 +1,28 @@
-# SW2 production key infrastructure (review-only)
-This folder contains production deployment **source**. It has not been installed.
-1. Require backup, release approval and a preflight rollback plan.
-2. Generate fresh random 32 bytes, Base64 encode and save only in Supabase Vault as `sw2_prod_report_wrap_v1` (no secrets in GitHub).
-3. Review/apply `001_sw2_keys.sql` through migration tooling.
-4. Deploy `sw2-report-key` from the already tested TEST implementation against the production project; keep JWT verification and `profiles.active` check.
-5. Validate status/register/open, inactive user 403, failed/offline operation, modified carrier rejection, two separate approved users opening the same report.
-6. Only then wire production config, publish reviewed `onsite-v2.0.html` privately and deploy new verified login with rollback.
-**Do not modify On-Site v1 or KVI v1 storage objects.** Existing encrypted test reports are not transferable: prod has a fresh wrapping key.
+# Safety Walk 2.0 production integration status – 2026-10-09
+
+## Installed and verified in production (project hvgljbyethfwxajnrvvi)
+- Migration `sw2_production_key_infrastructure_20261009` completed.
+- Table `public.sw2_report_keys` exists with RLS; no direct anon/authenticated table access.
+- Vault wrapping key `sw2_prod_report_wrap_v1` exists, generated server-side. Never put it in GitHub or client assets.
+- RPC `public.sw2_internal_wrap_key()` exists; only `service_role` has EXECUTE. Verified database permissions.
+- Edge Function `sw2-report-key` deployed ACTIVE with JWT verification and `profiles.active` approval checks.
+- Staging branch `sw2/config.mjs` points to this same production Supabase project as the verified live Safety Walk login.
+- CI run #12 passed all staging static/Node regression tests:
+  https://github.com/hse-safety/HSE-Safety-Walk/actions/runs/37968529198
+
+## NOT YET DEPLOYED OR VERIFIED
+- Live login page has NOT been replaced; the active On-Site module is still `onsite-v1.0.html`.
+- Native `onsite-v2.0.html` is in the staging branch, not the live private Storage bucket.
+- Browser/iPhone/Mac tests for complete login→SEND→AirDrop→open→edit→save→PDF have NOT been completed.
+- End-to-end approval tests for **a real production user**, second approved user, blocked user, network failure and rollback remain mandatory.
+- No general release. The GitHub PR #1 stays in DRAFT and must not be merged until approved.
+
+## Immediate controlled rollout checklist
+1. Set up isolated HTTPS preview without changing live login or production module, using the already prepared user-upload-derived staging HTML.
+2. Confirm existing Auth session and no extra login on On-Site. Test production Edge Function with approved and revoked test accounts.
+3. Complete Safari iPhone and Firefox Mac feature and negative tests, including photo, PDF, AirDrop and encrypted HTML re-save.
+4. Back up the current live login and Storage module. Deploy the new private object `onsite-v2.0.html` as a **new** object, never overwrite `onsite-v1.0.html`.
+5. Switch the verified login source's On-Site file reference only after the E2E tests pass and release is approved. Preserve KVI and all existing roles/access rules.
+6. Confirm PWA cache propagation and prepare immediate rollback of the On-Site reference to v1.0.
+
+The backend migration alone is additive and does not activate Safety Walk 2.0 for users.
