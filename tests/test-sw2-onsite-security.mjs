@@ -10,7 +10,7 @@ assert.match(html,/script\[data-sw2-secure-export\],script\[data-sw2-app-gate\],
 assert.match(gate,/approvalApi\('status'\)/);
 assert.match(gate,/window\.addEventListener\('offline'/);
 assert.match(gate,/createApprovalController/);
-assert.doesNotMatch(gate,/filter:\\s*blur/);
-assert.match(gate,/html:not\\(\\.sw2-approved\\) body \\{ visibility: hidden/);
+assert.equal(gate.includes('filter: blur'),false);
+assert(gate.includes('html:not(.sw2-approved) body { visibility: hidden'));
 assert.match(html,/data-sw2-preauth/);
 console.log('PASS: authentic On-Site 2.0 includes approval gate, secure export and clean portable snapshots');
