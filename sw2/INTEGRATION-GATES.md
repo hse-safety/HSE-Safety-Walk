@@ -18,3 +18,10 @@
 
 ## Sikkerhed
 En UI-spærring er aldrig kopibeskyttelse i sig selv. Rapportfilen skal være AES-GCM-krypteret, og serveren må kun frigive indholdsnøglen til godkendte aktive brugere. Allerede dekrypterede eller eksporterede PDF'er kan ikke tilbagekaldes. Offlinetilladelse er ikke implementeret.
+
+## Kontrol 2026-10-09 – verificerede produktionsforhold
+- GitHub `safety-login.html` er **0 byte** på udviklingsgrenen. Kan derfor ikke bruges til at lokalisere den aktive login/loader-kode. Det forbyder at antage, at `sw2Client` automatisk deler session med iPhone-login.
+- Supabase **produktion** (kun læst, ikke ændret): Storage-bucket `safety-modules` indeholder `onsite-v1.0.html` og `kvi-premises-v1.0.html`.
+- Den private inspektionsmoduls faktiske kildekode samt login-loader skal fremskaffes via en godkendt eksport eller konnektor med Storage-filadgang. Indtil da er `private-module-bridge.mjs` kun forberedende og må ikke installeres i produktionen.
+- Supabase TEST og produktion har forskellige brugerkonti og sessioner. Testmiljøets API-nøgle og brugerprofil må ikke forveksles med produktionens eksisterende User Management.
+- Vigtig frigivelseskontrol: En krypteret HTML-rapport skal åbnes af **alle aktive/godkendte brugere**, ikke kun den oprindelige inspektør; testen skal omfatte tilbagekaldelse af godkendelse.
