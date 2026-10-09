@@ -27,7 +27,7 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 <p>Onlinegodkendelse kræves. Rapportens indhold uploades ikke til serveren.</p></section>
 <div id="notice" role="status" aria-live="polite"></div></main>
 <section id="viewerScreen" hidden><div id="viewerHeader"><span id="viewerStatus">Godkendt rapport</span>
-<div><button type="button" id="saveReport">Gem krypteret HTML</button> <button type="button" id="closeReport">Luk rapport</button></div></div>
+<button type="button" id="closeReport">Luk rapport</button></div>
 <iframe id="inspectionFrame" title="Safety Walk-inspektion" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
 <script type="module">
 import { sw2Client, approvalApi } from './auth.mjs';
@@ -61,7 +61,6 @@ $('loginForm').addEventListener('submit',async e=>{
 $('logout').onclick=async()=>{closeReport();await sw2Client.auth.signOut();$('reportFile').value='';await checkSession();};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
-$('saveReport').onclick=()=>{if(!currentFrame||busy)return;$('viewerStatus').textContent='Klargør krypteret fil…';currentFrame.contentWindow.postMessage({type:'sw2-request-save'},'*');};
 async function verify(){await approvalApi('status');}
 function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
 $('openReport').onclick=async()=>{
