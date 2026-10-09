@@ -8,4 +8,8 @@ assert.match(app,/type: 'sw2-save-request', html: clearHtml/);
 assert.match(app,/window\.SW2ReportExport\.protectSnapshot\(clearHtml\)/);
 assert.match(app,/if \(!htmlText\) throw new Error/);
 assert(!viewer.includes('window.__SW2_VIEWER_FRAME=true;<\\\\/script>'),'iframe bootstrap must use a real closing script tag');
+assert.match(viewer,/requestEpoch!==accessEpoch/,'Pending report opening must be cancelled on lock');
+assert.match(viewer,/await verify\(\);\s*if\(requestEpoch!==accessEpoch\)/,'Revalidate approval immediately before showing the report');
+assert.match(viewer,/saveEpoch!==accessEpoch/,'Pending report save must be cancelled on lock');
+assert.match(viewer,/if\(epoch===accessEpoch\)revoke\(\)/,'Delayed polling responses must not lock new sessions');
 console.log('SW2 viewer integration checks passed');
