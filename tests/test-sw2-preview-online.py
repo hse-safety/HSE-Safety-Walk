@@ -20,5 +20,9 @@ with sync_playwright() as p:
  denied=page.request.get(API,timeout=20000)
  assert denied.status==401, f'Unauthenticated user unexpectedly received {denied.status}'
  assert 'onsite-v2.0' not in denied.text().lower(), 'Module must never be returned without authorization'
+ key_api='https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-report-key'
+ key_denied=page.request.post(key_api,data={'action':'status'},headers={'Content-Type':'application/json'},timeout=20000)
+ assert key_denied.status in (401,403), f'Anonymous report key endpoint returned {key_denied.status}'
+ assert 'key_b64' not in key_denied.text(), 'Key material exposed to anonymous requests'
  print('PASS: preview HTTPS login renders, CORS preflight works, private module rejects anonymous users')
  browser.close()
