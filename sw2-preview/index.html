@@ -12,7 +12,8 @@ form.addEventListener('submit',async event=>{
  try{
   const res=await fetch('https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-preview-cors',{headers:{Authorization:'Bearer '+data.session.access_token},cache:'no-store'});
   if(!res.ok)throw Error('Adgang afvist eller testserver ikke klar ('+res.status+').');
-  const html=await res.text();
+  const source=await res.text();
+  const html=source.replace("const SAFETY_WALK_VERSION = '1.0';", "const SAFETY_WALK_VERSION = '2.0';");
   if(!html.includes('data-safety-walk-version="2.0-staging"')||!html.includes('data-sw2-app-gate')||!html.includes('data-sw2-secure-export'))throw Error('Sikkerhedsmoduler mangler. Åbning afbrudt.');
   const metadata=data.user.user_metadata||{};
   window.__HSE_SW_IDENTITY={email:data.user.email,user_id:data.user.id,id:data.user.id,full_name:metadata.full_name||data.user.email,name:metadata.full_name||data.user.email};
