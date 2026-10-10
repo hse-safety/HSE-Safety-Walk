@@ -26,5 +26,7 @@ export async function approvalApi(action,fields={}){
   });
   const body=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(body.error||'Safety Walk approval failed ('+response.status+')');
+  // HTTP success is not proof of approval. Every caller of status must fail closed.
+  if(action==='status' && body.approved!==true)throw Error('Safety Walk access has not been approved.');
   return body;
 }
