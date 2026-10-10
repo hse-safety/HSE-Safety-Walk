@@ -23,7 +23,7 @@ try{
  const identity={id:data.user.id,user_id:data.user.id,userId:data.user.id,email:data.user.email,name:displayName,displayName,role:'user',access:{onsite:false,office:grant.access.office===true,warehouse:grant.access.warehouse===true}};
  // document.open() can replace document execution state. Ensure the unchanged
  // Facility access-control script sees its identity before it executes.
- const injected='<script>window.__HSE_SW_IDENTITY='+JSON.stringify(identity).replace(/</g,'\\u003c')+';<\\/script>';
+ const injected='<script>window.__HSE_SW_IDENTITY='+JSON.stringify(identity).replace(/</g,'\\u003c')+';<\/script>';
  html=html.replace(/<head(\\s[^>]*)?>/i,matched=>matched+injected);
  window.__HSE_SW_IDENTITY=identity;
  document.open();document.write(html);document.close();
