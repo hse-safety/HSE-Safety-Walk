@@ -1,24 +1,16 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Safety Walk 2.0 – sikker test</title><style>body{background:#eef3f7;color:#173048;font:17px system-ui;margin:0;padding:20px}main{max-width:430px;margin:8vh auto;background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 20px #1232}label{display:block;margin-top:14px}input{display:block;box-sizing:border-box;width:100%;padding:13px;font:inherit;margin-top:5px}button{background:#006970;color:#fff;border:0;border-radius:8px;padding:13px 20px;margin-top:22px;font:inherit;cursor:pointer}#status{min-height:2em}small{display:block;margin-top:20px}</style></head><body><main><h1>Safety Walk 2.0 · TEST</h1><p>Separat test. Safety Walk 1.0 ændres ikke.</p><form id="loginForm"><label>E-mail<input type="email" id="email" autocomplete="username" required></label><label>Adgangskode<input type="password" id="password" autocomplete="current-password" required></label><button type="submit">Åbn On-Site 2.0</button></form><p id="status" role="status"></p><small>Kun allerede godkendte Safety Walk-brugere har adgang.</small></main><script type="module">
-import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const sb=createClient('https://hvgljbyethfwxajnrvvi.supabase.co','sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c');
-const form=document.getElementById('loginForm'),status=document.getElementById('status');
-form.addEventListener('submit',async event=>{
- event.preventDefault();status.textContent='Logger ind og kontrollerer adgang…';
- const email=document.getElementById('email').value.trim();
- const password=document.getElementById('password').value;
- const {data,error}=await sb.auth.signInWithPassword({email,password});
- document.getElementById('password').value='';
- if(error||!data.session){status.textContent='Login mislykkedes. Kontrollér e-mail og adgangskode.';return}
- try{
-  const res=await fetch('https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-preview-cors',{headers:{Authorization:'Bearer '+data.session.access_token},cache:'no-store'});
-  if(!res.ok)throw Error('Adgang afvist eller testserver ikke klar ('+res.status+').');
-  const source=await res.text();
-  const html=source.replace("const SAFETY_WALK_VERSION = '1.0';", "const SAFETY_WALK_VERSION = '2.0';");
-  if(!html.includes('data-safety-walk-version="2.0-staging"')||!html.includes('data-sw2-app-gate')||!html.includes('data-sw2-secure-export'))throw Error('Sikkerhedsmoduler mangler. Åbning afbrudt.');
-  const metadata=data.user.user_metadata||{};
-  window.__HSE_SW_IDENTITY={email:data.user.email,user_id:data.user.id,id:data.user.id,full_name:metadata.full_name||data.user.email,name:metadata.full_name||data.user.email};
-  history.replaceState(null,'','./');
-  document.open();document.write(html);document.close();
- }catch(err){status.textContent=err.message}
-});
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Safety Walk 2.0</title></head><body><p id="bootStatus" role="status">Opening Safety Walk 2.0…</p><script>
+(async()=>{
+try{
+ const response=await fetch('../safety-login.html?sw2-loader=20261010-1',{cache:'no-store'});
+ if(!response.ok)throw Error('Login page unavailable ('+response.status+')');
+ let html=await response.text();
+ if(!html.includes('https://hvgljbyethfwxajnrvvi.supabase.co'))throw Error('Unexpected login configuration');
+ const start=html.indexOf('async function openPrivateModule('),end=html.indexOf("$('login').onclick",start);
+ if(start<0||end<start||!html.slice(start,end).includes('createSignedUrl'))throw Error('Login update required');
+ html=html.slice(0,start)+"async function openPrivateModule(fileName,label,allowed){\n  status('readyStatus','');\n\n  if(!allowed()){\n    status('readyStatus','Access to '+label+' has not been assigned to this account.');\n    return;\n  }\n\n  status('readyStatus','Opening '+label+'…',true);\n\n  try{\n    let r;\n    if (fileName === ONSITE_APP_FILE) {\n      // The preview server verifies the active user and On-Site permission.\n      // Direct Storage signing cannot read v2 under the unchanged v1 RLS policy.\n      const {data:{session},error:sessionError}=await supabase.auth.getSession();\n      if (sessionError || !session?.access_token) throw new Error('Login required');\n      r=await fetch(SUPABASE_URL+'/functions/v1/sw2-preview-cors', {\n        method:'GET', cache:'no-store',\n        headers:{'Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY}\n      });\n    } else {\n      const {data,error}=await supabase.storage.from(MODULE_BUCKET).createSignedUrl(fileName,60);\n      if(error) throw error;\n      r=await fetch(data.signedUrl, {cache:'no-store'});\n    }\n    if(!r.ok)throw new Error(r.status===401 ? 'Login required' : r.status===403 ? 'Access denied' : 'HTTP '+r.status);\n    let html=await r.text();\n    if (fileName === ONSITE_APP_FILE) {\n      // This is a private module, not a public GitHub copy. Never downgrade silently.\n      const valid = html.includes('data-safety-walk-version=\"2.0-staging\"')\n        && html.includes('data-sw2-app-gate')\n        && html.includes('data-sw2-secure-export')\n        && html.includes('SW2ReportExport.protectSnapshot(clearHtml)');\n      if (!valid) throw new Error('Safety Walk 2.0 security module missing; opening blocked.');\n      // Recheck central User Management immediately before allowing On-Site access.\n      const {data:{session},error:sessionError}=await supabase.auth.getSession();\n      if (sessionError || !session?.access_token) throw new Error('Login required');\n      const check=await fetch(SUPABASE_URL+'/functions/v1/sw2-report-key', {\n        method:'POST', cache:'no-store',\n        headers:{'Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY,'Content-Type':'application/json'},\n        body:JSON.stringify({action:'status'})\n      });\n      const approval=await check.json().catch(()=>({}));\n      if (!check.ok || approval.approved !== true) throw new Error('On-Site 2.0 approval denied.');\n    }\n    const identity=buildIdentity();\n    const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\\\u003c');\n    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';</scr'+'ipt>';\n\n    if(html.includes('</head>')){\n      html=html.replace('</head>',identityScript+'</head>');\n    }else{\n      html=identityScript+html;\n    }\n\n    document.documentElement.classList.remove('login-locked');\n    document.open();\n    document.write(html);\n    document.close();\n  }catch(err){\n    status('readyStatus','Unable to load '+label+': '+(err.message||err));\n  }\n}\n\n"+html.slice(end);
+ html=html.replace(/const ONSITE_APP_FILE='[^']+';/,"const ONSITE_APP_FILE='onsite-v2.0.html';");
+ html=html.replaceAll('href="./icon-192.png','href="../icon-192.png').replaceAll('href="./apple-touch-icon.png','href="../apple-touch-icon.png').replaceAll('href="./manifest.webmanifest?v=150"','href="./manifest.webmanifest?v=sw2-loader-1"').replaceAll('href="./safety-login.html"','href="./"');
+ document.open();document.write(html);document.close();
+}catch(error){document.getElementById('bootStatus').textContent='Unable to open Safety Walk 2.0: '+error.message;}
+})();
 </script></body></html>
