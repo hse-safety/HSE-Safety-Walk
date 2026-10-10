@@ -30,3 +30,10 @@ The backend migration alone is additive and does not activate Safety Walk 2.0 fo
 ## Preview fix 2026-10-09
 - `sw2-preview-cors` v2 deployed. It checks Supabase auth and `profiles.active` directly before serving On-Site 2.0; avoids broken `/sw2-preview/module` upstream (404).
 - Caveat: staging GitHub repository is public; its raw `onsite-v2.0.html` is publicly fetchable. This preview is suitable only for functional tests with non-sensitive test inspections. **It does not satisfy private-module anti-copy deployment requirements.** Before full release move On-Site into authenticated private Storage or packaged private edge assets. No confidential real inspections in preview.
+
+## Status 2026-10-10
+- Private `safety-modules/onsite-v2.0.html` is the sole active On-Site test source; `sw2-preview-cors` v5 has no public GitHub fallback.
+- Old inline asset function `sw2-preview` v3 returns HTTP 410.
+- The historical source may remain obtainable from public Git commits and is not made secret by removing the file from the current branch.
+- User-tested On-Site/Office/Warehouse, account revocation, encrypted SEND/AirDrop, and report viewer. No production 1.0 replacement authorized.
+- CI is registered on default branch to allow dispatch independently of the closed draft PR.
