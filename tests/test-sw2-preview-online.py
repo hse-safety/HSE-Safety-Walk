@@ -8,7 +8,8 @@ with sync_playwright() as p:
  response=page.goto(URL,wait_until='domcontentloaded',timeout=40000)
  assert response is not None and response.status==200, f'GH Pages status {response.status if response else "none"}'
  assert page.title().startswith('Safety Walk 2.0')
- assert page.locator('#loginForm').is_visible(), 'Preview login not rendered'
+ page.locator('#loginCard').wait_for(state='visible',timeout=20000)
+ assert page.locator('#email').is_visible(), 'Preview login not rendered'
  assert not page.locator('body').inner_text().startswith('<!doctype'), 'Raw HTML instead of a page'
  preflight=page.request.fetch(API,method='OPTIONS',headers={
    'Origin':'https://hse-safety.github.io',
