@@ -1,4 +1,5 @@
 import { createHandler,publicKey } from './core.mjs';
+import { readDatabaseResponse } from './rest-response.mjs';
 const url=Deno.env.get('SUPABASE_URL')!;
 const keys=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}');
 const secret=keys.default||Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -6,7 +7,7 @@ if(!url||!secret)throw Error('Missing server configuration');
 const headers={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
 async function rest(path:string,options:RequestInit={}){
  const r=await fetch(url+'/rest/v1/'+path,{...options,headers:{...headers,...options.headers}});
- if(!r.ok)throw Error('Database operation failed');return r.status===204?null:await r.json();
+ return readDatabaseResponse(r);
 }
 const one=async(path:string)=>(await rest(path))?.[0]||null;
 const db:any={
