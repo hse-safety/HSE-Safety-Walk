@@ -58,6 +58,8 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Install pinned Node browser-test dependency
         run: npm ci --ignore-scripts
+      - name: Build complete release shell
+        run: node sw2/build-licensed-release.mjs --out=dist-sw2
       - name: Verify device-bound offline licence and reconnection
         run: node tests/test-sw2-licensing-browser.cjs
       - name: Open and revoke encrypted report in browser

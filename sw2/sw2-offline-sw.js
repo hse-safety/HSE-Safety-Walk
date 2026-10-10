@@ -1,7 +1,7 @@
 const NAME='safety-walk-2-licensed-v1';
 const ROOT=new URL('./',self.location.href);
-const SHELL=new URL('index.html',ROOT).href;
-const LOCAL=['index.html','manifest.webmanifest','sw2/auth.mjs','sw2/approval-response.mjs','sw2/config.mjs','sw2/licensing.mjs','sw2/device-store.mjs','sw2/offline-lease.mjs','sw2/app-approval-gate.mjs','sw2/secure-export.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/launch.mjs','sw2/device-management.mjs'];
+const SHELL=new URL('safety-login.html',ROOT).href;
+const LOCAL=['safety-login.html','index.html','manifest.webmanifest','sw2/auth.mjs','sw2/approval-response.mjs','sw2/config.mjs','sw2/licensing.mjs','sw2/device-store.mjs','sw2/offline-lease.mjs','sw2/app-approval-gate.mjs','sw2/secure-export.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/launch.mjs','sw2/device-management.mjs'];
 async function cacheModuleGraph(url,cache,seen=new Set()){
  if(seen.has(url))return;seen.add(url);
  const r=await fetch(url,{cache:'reload',mode:'cors'});if(!r.ok)throw Error('Offline dependency unavailable');

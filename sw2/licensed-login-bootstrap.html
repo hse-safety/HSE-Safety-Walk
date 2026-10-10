@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Safety Walk 2.0</title><link rel="manifest" href="./manifest.webmanifest"></head><body><p id="bootStatus" role="status">Opening Safety Walk 2.0…</p><script type="module">
 try{
- if('serviceWorker' in navigator)await navigator.serviceWorker.register('./offline-sw.js',{scope:'./'});
+ if('serviceWorker' in navigator)await navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{});
  if(navigator.onLine===false){const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite();}
  else{
   const response=await fetch('../safety-login.html?sw2-release=2',{cache:'no-store'});if(!response.ok)throw Error('Login unavailable');
-  let html=await response.text();
+  let html=(await response.text()).replaceAll('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm','https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm');
   const start=html.indexOf('async function openPrivateModule('),end=html.indexOf("$('login').onclick",start);
   if(start<0||end<start)throw Error('Unsupported login version');
   const original=html.slice(start,end);

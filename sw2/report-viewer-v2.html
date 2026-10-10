@@ -78,7 +78,7 @@ $('openReport').onclick=async()=>{
   await verify();
   if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
   if(!/^<!doctype html>|<html/i.test(clear.trim()))throw Error('Ugyldigt rapportindhold.');
-  const frame=$('inspectionFrame');currentFrame=frame;
+  const frame=$('inspectionFrame');currentFrame=frame;frame.inert=false;frame.style.visibility='';
   // Report iframe has an opaque origin. It cannot read viewer auth tokens.
   // This flag is used by the original SEND function to hand a revised report to its trusted parent.
   const framed=clear.replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
@@ -113,6 +113,6 @@ window.addEventListener('message',async event=>{
  }catch(error){$('viewerStatus').textContent='Rapporten blev ikke gemt: '+error.message;}
  finally{busy=false;}
 });
-if('serviceWorker' in navigator)void navigator.serviceWorker.register('../offline-sw.js',{scope:'../'});
+if('serviceWorker' in navigator)void navigator.serviceWorker.register('../offline-sw.js',{scope:'../'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});
 await checkSession();
 </script></body></html>

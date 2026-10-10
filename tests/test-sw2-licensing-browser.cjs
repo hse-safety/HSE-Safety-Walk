@@ -32,5 +32,14 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  active=false;await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval()}catch{}});await context.setOffline(true);await page.waitForTimeout(30);
  denied=await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval();return false}catch{return true}});assert(denied,'Revoked user reused cached licence');
  console.log('PASS: real browser device keys/IndexedDB encryption, pending approval, offline app/report opening and encrypted key queue, lease expiry, reconnect synchronisation and revoked-user cache invalidation.');
- await browser.close();server.close();
+ // Confirm the complete PWA shell and dependency graph actually work offline.
+ const shellContext=await browser.newContext(),shell=await shellContext.newPage();
+ const shellErrors=[];shell.on('pageerror',e=>shellErrors.push(String(e)));
+ await shell.goto(base+'/dist-sw2/safety-login.html');
+ await shell.waitForFunction(()=>navigator.serviceWorker.controller?.state==='activated',null,{timeout:60000});
+ await shellContext.setOffline(true);await shell.reload();
+ await shell.waitForFunction(()=>document.getElementById('loginStatus')?.textContent.includes('Login required'));
+ assert.equal(shellErrors.length,0,shellErrors.join('\n'));
+ console.log('PASS: installed full PWA shell and pinned dependency graph load offline; unapproved browser remains locked.');
+ await shellContext.close();await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});
