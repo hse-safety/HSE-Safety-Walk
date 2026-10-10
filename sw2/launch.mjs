@@ -1,6 +1,8 @@
-import {loadPrivateApp,forgetApproval,rememberIdentity,offlineIdentity} from './licensing.mjs';
+import {loadPrivateApp,forgetApproval,rememberIdentity,offlineIdentity,selectModule} from './licensing.mjs';
 import {prepareLicensedModule} from './prepare-licensed-module.mjs';
-export async function openLicensedOnsite(identity,module='onsite'){
+export async function openLicensedOnsite(identity,module){
+ if(!module){const previous=localStorage.getItem('sw2-last-module');module=['onsite','facility'].includes(previous)?previous:'onsite';}
+ selectModule(module);
  if(identity)await rememberIdentity(identity);else identity=await offlineIdentity();
  let html=prepareLicensedModule(await loadPrivateApp(module));
  const json=JSON.stringify(identity).replace(/</g,'\\u003c');

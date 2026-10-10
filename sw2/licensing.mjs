@@ -3,6 +3,7 @@ import {verifyOfflineLease} from './offline-lease.mjs';
 import {deviceStore} from './device-store.mjs';
 const project=new URL(SUPABASE_URL).hostname.split('.')[0],encoder=new TextEncoder();
 let selectedModule=location.pathname.includes('report-viewer')?'report':'onsite';
+export function selectModule(module){if(!['onsite','facility','report'].includes(module))throw Error('Invalid module');selectedModule=module;window.__SW2_MODULE=module;if(module!=='report')localStorage.setItem('sw2-last-module',module);}
 const activeModule=()=>window.__SW2_MODULE||selectedModule;
 let context,serial=Promise.resolve(),epoch=0;const listeners=new Set();
 const b64=b=>{let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')};
@@ -58,6 +59,8 @@ export async function requireApproval({renew=false}={}){
    await ctx.store.seal('signing-key',trusted);
    await ctx.store.put('lease',{compact:data.lease,serverTime:data.server_time,wall:Date.now()});
    context.anchor={serverTime:data.server_time,mono:performance.now()};await ctx.store.put('clock',{wall:Date.now(),trusted:data.server_time});
+   const original=window.__HSE_SW_IDENTITY?.access;
+   if(activeModule()==='facility'&&original&&(data.modules?.office!==original.office||data.modules?.warehouse!==original.warehouse))throw Error('Facility approval changed. Close and reopen Safety Walk.');
    await flushPending();if(ticket!==epoch)throw Error('Approval superseded');emit(true);return data;
   }catch(e){if(e.status===401||e.status===403)await ctx.store.purge();else await ctx.store.remove('lease');emit(false,e.message);throw e;}
  });
@@ -77,7 +80,7 @@ export async function licenceApi(action,fields={}){
  throw Error('Unsupported report operation');
 }
 async function flushPending(){const ctx=await state();for(const [key]of await ctx.store.entries())if(String(key).startsWith('pending:')){const fields=await ctx.store.unseal(key);await call('register',fields);await ctx.store.remove(key);}}
-export async function loadPrivateApp(module='onsite'){selectedModule=module;window.__SW2_MODULE=module;await requireApproval();const ctx=await state(),cache='app:'+module;if(navigator.onLine===false){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
+export async function loadPrivateApp(module='onsite'){selectModule(module);await requireApproval();const ctx=await state(),cache='app:'+module;if(navigator.onLine===false){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
 export async function forgetApproval(){epoch++;if(context)await context.store.purge();emit(false,'Logged out');}
 export async function adminDevices(action,fields={}){await registerDevice();return call(action,fields);}
 export function invalidateApproval(){epoch++;emit(false,'Checking current approval');}
