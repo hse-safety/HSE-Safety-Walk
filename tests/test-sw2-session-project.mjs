@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const auth=readFileSync(new URL('../sw2/auth.mjs',import.meta.url),'utf8');
+const config=readFileSync(new URL('../sw2/config.mjs',import.meta.url),'utf8');
+const release=readFileSync(new URL('../sw2/config.production.mjs',import.meta.url),'utf8');
+const licensing=readFileSync(new URL('../sw2/licensing.mjs',import.meta.url),'utf8');
+assert.match(licensing,/sessionMatchesProject\(current,SUPABASE_URL\)/);
+assert.match(auth,/claims\.iss === expectedIssuer/);
+assert.match(auth,/claims\.sub === session\.user\?\.id/);
+assert.match(auth,/claims\.exp > Date\.now\(\)\/1000/);
+assert.match(config,/hvgljbyethfwxajnrvvi/);
+assert.doesNotMatch(config,/lsczcfpwvhtnbqckjlhv/);
+assert.match(release,/hvgljbyethfwxajnrvvi/);
+assert.doesNotMatch(release,/lsczcfpwvhtnbqckjlhv/);
+console.log('PASS: environment mismatch and expired token guard is in place');

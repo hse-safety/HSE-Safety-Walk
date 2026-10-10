@@ -764,7 +764,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm';
 
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
@@ -946,7 +946,7 @@ function buildIdentity(){
   };
 }
 
-async function openPrivateModule(fileName,label,allowed){
+async function openLegacyPrivateModule(fileName,label,allowed){
   status('readyStatus','');
 
   if(!allowed()){
@@ -1008,6 +1008,12 @@ async function openPrivateModule(fileName,label,allowed){
   }
 }
 
+async function openPrivateModule(file,label,allowed){
+ if(file!==ONSITE_APP_FILE)return openLegacyPrivateModule(file,label,allowed);
+ if(!allowed()){status('readyStatus','On-Site approval required.');return;}
+ status('readyStatus','Opening On-Site…',true);
+ try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity());}catch(error){status('readyStatus',error.message);}
+}
 $('login').onclick=async()=>{
   status('loginStatus','');
 
@@ -1570,7 +1576,8 @@ async function boot(){
   }
 }
 
-boot();
+if('serviceWorker' in navigator)void navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});
+if(navigator.onLine!==false)boot();else{try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite();}catch(error){status('loginStatus',error.message);}}
 </script>
-</body>
+<script type="module">import {attachDeviceManagement} from "./sw2/device-management.mjs";import {attachLogout} from "./sw2/launch.mjs";attachDeviceManagement(document.getElementById("adminCard"));attachLogout(document.getElementById("logout"));</script></body>
 </html>

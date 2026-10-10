@@ -1,4 +1,4 @@
-name: Safety Walk 2.0 staging tests
+name: Safety Walk 2.0 staging security validation
 on:
   push:
     branches:
@@ -56,6 +56,12 @@ jobs:
         run: |
           python -m pip install playwright==1.56.0
           python -m playwright install --with-deps chromium
+      - name: Install pinned Node browser-test dependency
+        run: npm ci --ignore-scripts
+      - name: Build complete release shell
+        run: node sw2/build-licensed-release.mjs --out=dist-sw2
+      - name: Verify device-bound offline licence and reconnection
+        run: node tests/test-sw2-licensing-browser.cjs
       - name: Open and revoke encrypted report in browser
         run: python tests/test-sw2-browser.py
 

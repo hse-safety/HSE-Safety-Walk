@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Safety Walk 2.0</title><link rel="manifest" href="./manifest.webmanifest"></head><body><p id="bootStatus" role="status">Opening Safety Walk 2.0…</p><script type="module">
+try{
+ if('serviceWorker' in navigator)await navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{});
+ if(navigator.onLine===false){const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite();}
+ else{
+  const response=await fetch('../safety-login.html?sw2-release=2',{cache:'no-store'});if(!response.ok)throw Error('Login unavailable');
+  let html=(await response.text()).replaceAll('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm','https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm');
+  const start=html.indexOf('async function openPrivateModule('),end=html.indexOf("$('login').onclick",start);
+  if(start<0||end<start)throw Error('Unsupported login version');
+  const original=html.slice(start,end);
+  // Only On-Site opening is replaced. KVI keeps its existing function.
+  const legacy=original.replace('async function openPrivateModule(', 'async function openLegacyPrivateModule(');
+  const loader=`async function openPrivateModule(file,label,allowed){
+   if(file!==ONSITE_APP_FILE)return openLegacyPrivateModule(file,label,allowed);
+   if(!allowed()){status('readyStatus','On-Site approval required.');return;}
+   status('readyStatus','Opening On-Site…',true);
+   try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity());}catch(error){status('readyStatus',error.message);}
+  }\n`;
+  html=html.slice(0,start)+legacy+loader+html.slice(end);
+  html=html.replace(/const ONSITE_APP_FILE='[^']+';/,"const ONSITE_APP_FILE='onsite-v2.0.html';");
+  html=html.replaceAll('href="./icon-192.png','href="../icon-192.png').replaceAll('href="./apple-touch-icon.png','href="../apple-touch-icon.png').replaceAll('href="./manifest.webmanifest?v=150"','href="./manifest.webmanifest"').replaceAll('href="./safety-login.html"','href="./"');
+  const management=`<script type="module">import {attachDeviceManagement} from './sw2/device-management.mjs';import {attachLogout} from './sw2/launch.mjs';attachDeviceManagement(document.getElementById('adminCard'));attachLogout(document.getElementById('logout'));</scr`+`ipt>`;
+  html=html.replace('</body>',management+'</body>');document.open();document.write(html);document.close();
+ }
+}catch(error){document.getElementById('bootStatus').textContent='Safety Walk 2.0: '+error.message;}
+</script></body></html>

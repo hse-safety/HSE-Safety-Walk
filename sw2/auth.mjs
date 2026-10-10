@@ -1,5 +1,6 @@
+import { licenceApi } from './licensing.mjs';
 import { validateApprovalResponse } from './approval-response.mjs';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, REPORT_KEY_ENDPOINT } from './config.mjs';
 export const sw2Client=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 // Reject a session belonging to a different Supabase project, even if a
@@ -18,15 +19,6 @@ export function sessionMatchesProject(session, baseUrl) {
   } catch {return false;}
 }
 export async function approvalApi(action,fields={}){
-  const {data:{session},error}=await sw2Client.auth.getSession();
-  if(error||!sessionMatchesProject(session,SUPABASE_URL))throw Error('Safety Walk session does not match the configured project. Login required.');
-  const response=await fetch(REPORT_KEY_ENDPOINT,{
-    method:'POST',cache:'no-store',
-    headers:{'Content-Type':'application/json',apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+session.access_token},
-    body:JSON.stringify({action,...fields})
-  });
-  const body=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(body.error||'Safety Walk approval failed ('+response.status+')');
-  // HTTP success is not proof of approval. Every caller of status must fail closed.
-  return validateApprovalResponse(action,body);
+ const response=await licenceApi(action,fields);
+ return validateApprovalResponse(action,response);
 }

@@ -1,0 +1,2 @@
+// Activate ONLY with the complete licensed 2.0 client. Safety Walk 1.0 does not use these endpoints.
+Deno.serve(req=>new Response(req.method==='OPTIONS'?null:JSON.stringify({error:'This 2.0 preview endpoint has been replaced by device-approved licensing.'}),{status:req.method==='OPTIONS'?204:410,headers:{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'https://hse-safety.github.io','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'GET,POST,OPTIONS'}}));

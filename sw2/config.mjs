@@ -5,3 +5,8 @@ export const SUPABASE_URL = 'https://hvgljbyethfwxajnrvvi.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c';
 export const REPORT_KEY_ENDPOINT = SUPABASE_URL + '/functions/v1/sw2-report-key';
 export const REPORT_VIEWER_URL = new URL('./report-viewer-v2.html', import.meta.url).href;
+
+// Optional build pin. Otherwise trust the fixed HTTPS server endpoint online and
+// keep its public key in authenticated device storage for offline verification.
+export const LICENSE_ENDPOINT = SUPABASE_URL + '/functions/v1/sw2-license';
+export const LICENSE_PUBLIC_KEY = null;

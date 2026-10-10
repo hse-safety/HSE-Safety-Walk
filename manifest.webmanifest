@@ -1,6 +1,6 @@
 {
-  "name": "SAFETY WALK",
-  "short_name": "SAFETY WALK",
+  "name": "Safety Walk 2.0",
+  "short_name": "Safety Walk 2.0",
   "description": "HSE Safety Walk inspection template",
   "start_url": "./safety-login.html",
   "scope": "./",
