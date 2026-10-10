@@ -1,0 +1,63 @@
+name: Safety Walk 2.0 staging tests
+on:
+  push:
+    branches:
+      - safety-walk-2-secure-html-staging
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check new JS modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in sw2/*.mjs tests/test-sw2-*.mjs; do node --check "$f"; done
+      - name: Run SW2 staging regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in tests/test-sw2-*.mjs; do
+            echo "Running $f"
+            node "$f"
+          done
+      - name: Ensure 2.0 staging uses same Supabase project as active login
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'hvgljbyethfwxajnrvvi' sw2/config.mjs
+          ! grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
+          grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
+          test ! -e onsite-v2.0.html
+          ! grep -R -l 'raw.githubusercontent.com/hse-safety/HSE-Safety-Walk/safety-walk-2-secure-html-staging/onsite-v2.0.html' sw2-preview/ sw2/ || exit 1
+          test -f safety-login.html
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright Chromium
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Open and revoke encrypted report in browser
+        run: python tests/test-sw2-browser.py
+
+      - name: Validate live GitHub Pages preview and anonymous access denial
+        run: python tests/test-sw2-preview-online.py
