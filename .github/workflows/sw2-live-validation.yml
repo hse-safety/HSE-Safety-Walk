@@ -28,7 +28,7 @@ jobs:
           grep -q "const KVI_APP_FILE='kvi-premises-v1.0.html';" safety-login.html
           grep -q 'approval.approved !== true' safety-login.html
           grep -q 'data-sw2-app-gate' safety-login.html
-          grep -q 'hse-safety-walk-v151' sw.js
+          grep -Eq "hse-safety-walk-v15[2-9](-sw2)?" sw.js
           for f in sw2/*.mjs; do node --check "$f"; done
           node <<'JS'
           const fs=require('fs'),cp=require('child_process');
