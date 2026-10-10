@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hse-safety-walk-v150';
+const CACHE_NAME = 'hse-safety-walk-v151';
 const APP_SHELL = [
   './',
   './index.html',
@@ -38,7 +38,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  // Auth, approval and report modules must always prefer a fresh network response.
+  // The existing fail-closed authorization gate remains responsible for offline denial.
+  if (request.mode === 'navigate' || url.pathname.includes('/sw2/')) {
     event.respondWith(
       fetch(new Request(request, { cache: 'no-store' }))
         .then(response => {
