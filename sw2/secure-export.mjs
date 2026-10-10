@@ -13,7 +13,7 @@ const canonical=html=>html.replace(/data-audit-storage-key="[^"]*"/g,'data-audit
 function snapshot(build){observer?.disconnect();try{return build()}finally{observe()}}
 function observe(){if(observer&&document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['src','checked','value','selected'],characterData:true});}
 function preparationState(busy){const b=window.__SW2_SEND_BUTTON;if(!b||sharing)return;b.disabled=busy;b.textContent=busy?'Preparing…':'SEND';}
-function invalidate(){preparationState(true);generation++;dirty=true;prepared=null;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
+function invalidate(){preparationState(true);generation++;dirty=true;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
 async function prepare(build=window.__SW2_SNAPSHOT,name=window.__SW2_FILENAME) {
  if(!build||!name||!document.documentElement.classList.contains('sw2-approved'))return null;
  if(job)return job;
@@ -31,7 +31,7 @@ export function shareSnapshot(build,name,button){
  if(!document.documentElement.classList.contains('sw2-approved'))return;
  // No await, fetch or encryption may precede this call to navigator.share().
  const current=canonical(snapshot(build));
- if(!prepared||dirty||prepared.fingerprint!==current){
+ if(!prepared||prepared.fingerprint!==current){
   invalidate();button.disabled=true;const label=button.textContent;button.textContent='Preparing…';
   return (async()=>{try{const ready=await prepare(build,name);if(ready)alert('The protected report is ready. Tap SEND to open Mail or AirDrop.');else alert('The report is still being prepared. Please try SEND again.');}catch(e){alert('The protected report could not be prepared: '+e.message)}finally{button.disabled=false;button.textContent=label}})();
  }
