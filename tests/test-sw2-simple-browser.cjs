@@ -40,6 +40,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  try{await shell.waitForFunction(()=>navigator.serviceWorker.controller?.state==='activated',null,{timeout:30000});}catch(error){console.log('SHELL DIAGNOSTICS',shellErrors,await shell.evaluate(async()=>({offlineReady:document.documentElement.dataset.sw2OfflineReady,registrations:(await navigator.serviceWorker.getRegistrations()).map(r=>({scope:r.scope,installing:r.installing?.state,waiting:r.waiting?.state,active:r.active?.state})),caches:await caches.keys()})));throw error;}
  // WebKit automation offline mode aborts top-level navigation before its worker.
  // Drop the actual HTTP connection instead, exercising the installed worker cache.
+ await shellContext.addInitScript(()=>Object.defineProperty(navigator,'onLine',{get:()=>false}));
  networkAvailable=false;await shell.reload();
  await shell.waitForFunction(()=>document.getElementById('loginStatus')?.textContent.includes('Login required'));
  assert.equal(shellErrors.length,0,shellErrors.join('\n'));
