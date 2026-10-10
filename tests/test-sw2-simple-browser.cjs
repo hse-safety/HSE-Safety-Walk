@@ -6,7 +6,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const privateJwk=await crypto.subtle.exportKey('jwk',signing.privateKey),publicJwk=publicKey(await crypto.subtle.exportKey('jwk',signing.publicKey));
  const user=crypto.randomUUID(),devices=new Map(),challenges=new Map(),reports=new Map();let active=true;
  const db={profile:async()=>({active,role:'user'}),access:async()=>({allow_onsite:true}),device:async id=>devices.get(id),devices:async()=>[...devices.values()],challenge:async r=>challenges.set(r.challenge,r),consume:async(c,u,d,t)=>{const r=challenges.get(c);challenges.delete(c);return r&&r.user_id===u&&r.device_id===d&&Date.parse(r.expires_at)>t?r:null},registerDevice:async r=>{devices.set(r.device_id,r);return r},touchDevice:async()=>{},report:async id=>reports.get(id),registerReport:async r=>reports.set(r.report_id,r)};
- const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>{const pathname=new URL(req.url,'http://localhost').pathname;if(pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><body>Licence integration</body></html>')};const file=path.resolve(root,'.'+pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end()};res.setHeader('Content-Type',/\.m?js$/.test(file)?'text/javascript':'text/html');res.end(fs.readFileSync(file))});
+ let networkAvailable=true;const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>{if(!networkAvailable){req.socket.destroy();return;}const pathname=new URL(req.url,'http://localhost').pathname;if(pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><body>Licence integration</body></html>')};const file=path.resolve(root,'.'+pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end()};res.setHeader('Content-Type',/\.m?js$/.test(file)?'text/javascript':'text/html');res.end(fs.readFileSync(file))});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const handler=createHandler({db,getUser:async t=>t==='valid'?{id:user}:null,getSigningKey:async()=>privateJwk,getWrapKey:async()=>btoa('A'.repeat(32)),getModule:async()=>'<html data-sw2-app-gate data-sw2-secure-export>Private inspection module</html>',projectRef:'test',origin:base});
  const browser=await webkit.launch({headless:true});const context=await browser.newContext();const page=await context.newPage();
@@ -38,7 +38,9 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const shellErrors=[];shell.on('pageerror',e=>shellErrors.push(String(e)));shell.on('console',m=>console.log('SHELL',m.type(),m.text()));shell.on('requestfailed',r=>console.log('SHELL REQUEST FAILED',r.url(),r.failure()));
  await shell.goto(base+'/safety-login.html');
  try{await shell.waitForFunction(()=>navigator.serviceWorker.controller?.state==='activated',null,{timeout:30000});}catch(error){console.log('SHELL DIAGNOSTICS',shellErrors,await shell.evaluate(async()=>({offlineReady:document.documentElement.dataset.sw2OfflineReady,registrations:(await navigator.serviceWorker.getRegistrations()).map(r=>({scope:r.scope,installing:r.installing?.state,waiting:r.waiting?.state,active:r.active?.state})),caches:await caches.keys()})));throw error;}
- await shellContext.setOffline(true);await shell.reload();
+ // WebKit automation offline mode aborts top-level navigation before its worker.
+ // Drop the actual HTTP connection instead, exercising the installed worker cache.
+ networkAvailable=false;await shell.reload();
  await shell.waitForFunction(()=>document.getElementById('loginStatus')?.textContent.includes('Login required'));
  assert.equal(shellErrors.length,0,shellErrors.join('\n'));
  console.log('PASS: installed full PWA shell and pinned dependency graph load offline; unapproved browser remains locked.');
