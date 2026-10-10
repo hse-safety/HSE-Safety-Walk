@@ -15,7 +15,12 @@ try{
  if(html.length<350000||!html.toLowerCase().includes('</head>'))throw Error('Ugyldig privat Facility-fil.');
  const head=`<style id="sw2-premises-lock-style">html:not(.sw2-premises-approved) body{visibility:hidden!important}html:not(.sw2-premises-approved)::after{content:'Office / Warehouse Facility 2.0 – adgang kontrolleres';position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;text-align:center;font:600 18px system-ui;background:#f4f6f7;color:#173048}html.sw2-premises-denied::after{content:'Adgang til Office / Warehouse Facility 2.0 er ikke godkendt. Kontakt administrator.'}</style><script type="module" src="./sw2-premises-gate.mjs"><\/script>`;
  html=html.replace(/<\/head>/i,head+'</head>');
- window.__HSE_SW_IDENTITY={id:data.user.id,user_id:data.user.id,email:data.user.email,name:data.user.user_metadata?.full_name||data.user.email};
+ const permission=await fetch(api+'?check=1',{headers:{Authorization:'Bearer '+data.session.access_token},cache:'no-store'});
+ if(!permission.ok)throw Error('Facility-adgang afvist ('+permission.status+').');
+ const grant=await permission.json();
+ if(grant.approved!==true||!(grant.access?.office===true||grant.access?.warehouse===true))throw Error('Facility-adgang mangler.');
+ const displayName=data.user.user_metadata?.full_name||data.user.email;
+ window.__HSE_SW_IDENTITY={id:data.user.id,user_id:data.user.id,userId:data.user.id,email:data.user.email,name:displayName,displayName,role:'user',access:{onsite:false,office:grant.access.office===true,warehouse:grant.access.warehouse===true}};
  document.open();document.write(html);document.close();
 }catch(e){notice.textContent=e.message}
 });
