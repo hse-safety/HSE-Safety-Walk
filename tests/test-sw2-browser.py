@@ -7,7 +7,7 @@ repo=Path(__file__).resolve().parent.parent
 fake_auth="""window.__sw2Fake={approved:true,signedIn:false,keys:{}};
 const auth={getUser:async()=>({data:{user:window.__sw2Fake.signedIn?{id:'test-only'}:null}}),signInWithPassword:async()=>{window.__sw2Fake.signedIn=true;return {error:null}},signOut:async()=>{window.__sw2Fake.signedIn=false;return {error:null}}};
 export const sw2Client={auth};
-export async function approvalApi(action,fields={}){if(!window.__sw2Fake.signedIn||!window.__sw2Fake.approved)throw Error('Access Denied');if(action==='status')return {approved:true};if(action==='open'){let key=window.__sw2Fake.keys[fields.report_id];if(!key)throw Error('Unknown report');return {key_b64:key}}if(action==='register'){window.__sw2Fake.keys[fields.report_id]=fields.key_b64;return {registered:true}}throw Error('Bad action')}
+export async function approvalApi(action,fields={}){if(!window.__sw2Fake.signedIn||!window.__sw2Fake.approved)throw Error('Access Denied');if(action==='status')return {approved:true,server_time:Date.now(),expires_at:Date.now()+86400000};if(action==='open'){let key=window.__sw2Fake.keys[fields.report_id];if(!key)throw Error('Unknown report');return {key_b64:key}}if(action==='register'){window.__sw2Fake.keys[fields.report_id]=fields.key_b64;return {registered:true}}throw Error('Bad action')}
 """
 with sync_playwright() as p:
  browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
@@ -16,6 +16,8 @@ with sync_playwright() as p:
  page.on('pageerror',lambda e:errors.append(str(e)))
  def route(req):
   part=req.request.url.split('https://safetywalk.example/')[1].split('?')[0]
+  if part=='sw2/licensing.mjs':
+   return req.fulfill(status=200,content_type='text/javascript',body="export async function forgetApproval(){};export function onApprovalChange(){};export function invalidateApproval(){};")
   if part=='sw2/auth.mjs':
    return req.fulfill(status=200,content_type='text/javascript',body=fake_auth)
   target=(repo/part).resolve()

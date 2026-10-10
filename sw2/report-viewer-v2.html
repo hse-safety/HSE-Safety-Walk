@@ -24,29 +24,28 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 <p>Vælg den HTML-rapport, du har modtaget via AirDrop eller e-mail.</p>
 <input id="reportFile" type="file" accept=".html,text/html">
 <button id="openReport" class="primary" type="button" disabled>Åbn efter godkendelse</button>
-<p>Onlinegodkendelse kræves. Rapportens indhold uploades ikke til serveren.</p></section>
+<p>Godkendte enheder kan bruge tidligere åbnede rapporter offline i højst 24 timer. Rapportens indhold uploades ikke til serveren.</p></section>
 <div id="notice" role="status" aria-live="polite"></div></main>
 <section id="viewerScreen" hidden><div id="viewerHeader"><span id="viewerStatus">Godkendt rapport</span>
 <button type="button" id="closeReport">Luk rapport</button></div>
 <iframe id="inspectionFrame" title="Safety Walk-inspektion" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
 <script type="module">
 import { sw2Client, approvalApi } from './auth.mjs';
+import {forgetApproval,onApprovalChange,invalidateApproval} from './licensing.mjs';
 import { readCarrierHtml, decryptHtml, encryptHtml, buildCarrierHtml } from './report-core.mjs';
 const $=id=>document.getElementById(id);
-let currentFrame=null, timer=null, busy=false, accessEpoch=0;
+let currentFrame=null, timer=null, expiryTimer=null, busy=false, accessEpoch=0;
 const show=(id,yes)=>{$(id).hidden=!yes;};
 const notice=text=>{$('notice').textContent=text||'';};
 function closeReport(){
   accessEpoch++;
-  clearInterval(timer);timer=null;
+  clearInterval(timer);timer=null;clearTimeout(expiryTimer);expiryTimer=null;
   if(currentFrame){currentFrame.removeAttribute('srcdoc');currentFrame.src='about:blank';currentFrame=null;}
   $('viewerScreen').hidden=true;$('workplace').hidden=false;
 }
 async function checkSession(){
   closeReport();const checkEpoch=accessEpoch;$('workplace').hidden=false;
   try{
-    const {data:{user}}=await sw2Client.auth.getUser();
-    if(!user)throw Error('Log ind for at åbne en rapport.');
     await approvalApi('status');
     if(checkEpoch!==accessEpoch)return;
     show('loginScreen',false);show('pickScreen',true);
@@ -60,10 +59,11 @@ $('loginForm').addEventListener('submit',async e=>{
  if(error){notice('Login mislykkedes.');return;}
  await checkSession();
 });
-$('logout').onclick=async()=>{closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logger ud…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Kunne ikke bekræfte logout. Luk denne fane.');}};
+$('logout').onclick=async()=>{await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logger ud…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Kunne ikke bekræfte logout. Luk denne fane.');}};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
-async function verify(){await approvalApi('status');}
+async function verify(){if(currentFrame){currentFrame.inert=true;currentFrame.style.visibility='hidden';}try{const lease=await approvalApi('status');clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>{if(currentFrame){currentFrame.inert=true;currentFrame.style.visibility='hidden';void verify().catch(revoke);}},Math.max(0,lease.expires_at-lease.server_time));if(currentFrame){currentFrame.inert=false;currentFrame.style.visibility='';}}catch(e){throw e;}}
+onApprovalChange(({approved,message})=>{if(!currentFrame)return;currentFrame.inert=!approved;currentFrame.style.visibility=approved?'':'hidden';if(!approved)$('viewerStatus').textContent=message||'Approval required';});
 function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
 $('openReport').onclick=async()=>{
  if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
@@ -90,7 +90,7 @@ $('openReport').onclick=async()=>{
  finally{busy=false;$('openReport').disabled=!$('reportFile').files?.length;}
 };
 for(const evt of ['online'])window.addEventListener(evt,async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
-window.addEventListener('offline',()=>{if(currentFrame)revoke();});
+window.addEventListener('offline',async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&currentFrame){try{await verify();}catch{revoke();}}});
 window.addEventListener('message',async event=>{
  if(!currentFrame||event.source!==currentFrame.contentWindow||event.data?.type!=='sw2-save-request'||busy)return;
@@ -113,5 +113,6 @@ window.addEventListener('message',async event=>{
  }catch(error){$('viewerStatus').textContent='Rapporten blev ikke gemt: '+error.message;}
  finally{busy=false;}
 });
+if('serviceWorker' in navigator)void navigator.serviceWorker.register('../offline-sw.js',{scope:'../'});
 await checkSession();
 </script></body></html>
