@@ -6,6 +6,8 @@ assert.match(result,/onsite-v2\.0\.html/);
 assert.match(result,/security module missing/);
 assert.match(result,/data-sw2-app-gate/);
 assert.match(result,/approval\.approved !== true/);
+assert.match(result,/html=html\.replace\(/);
+assert.match(result,/const SAFETY_WALK_VERSION = '2\.0';/);
 assert.match(result,/KVI_APP_FILE='kvi-premises-v1\.0\.html'/);
 assert.match(result,/const identity=buildIdentity/);
 assert.throws(()=>prepareV2LoginSource(source.replace('onsite-v1.0','different')));
