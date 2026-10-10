@@ -24,5 +24,16 @@ with sync_playwright() as p:
  key_denied=page.request.post(key_api,data={'action':'status'},headers={'Content-Type':'application/json'},timeout=20000)
  assert key_denied.status in (401,403), f'Anonymous report key endpoint returned {key_denied.status}'
  assert 'key_b64' not in key_denied.text(), 'Key material exposed to anonymous requests'
- print('PASS: preview HTTPS login renders, CORS preflight works, private module rejects anonymous users')
+ facility_api='https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-premises-preview'
+ facility_denied=page.request.get(facility_api,timeout=20000)
+ assert facility_denied.status==401, f'Anonymous Facility module returned {facility_denied.status}'
+ facility_denied_status=page.request.get(facility_api+'?check=1',timeout=20000)
+ assert facility_denied_status.status==401, f'Anonymous Facility permission status returned {facility_denied_status.status}'
+ gate=page.request.get('https://hse-safety.github.io/HSE-Safety-Walk/sw2-premises-preview/sw2-premises-gate.mjs',timeout=20000)
+ assert gate.status==200, f'Facility security gate returned {gate.status}'
+ gate_source=gate.text()
+ assert 'result.access?.office!==original.office' in gate_source
+ assert 'result.access?.warehouse!==original.warehouse' in gate_source
+ assert 'state(false)' in gate_source
+ print('PASS: preview login, anonymous access denied for both modules and keys, Facility grant-change lock present')
  browser.close()
