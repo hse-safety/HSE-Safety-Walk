@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { prepareV2LoginSource } from '../sw2/prepare-login-v2.mjs';
-const source="<script>const MODULE_BUCKET='safety-modules';\nconst ONSITE_APP_FILE='onsite-v1.0.html';\nasync function openPrivateModule(){\n    let html=await r.text();\n    const identity=buildIdentity();\n}</script>";
+const source="<script>const MODULE_BUCKET='safety-modules';\nconst ONSITE_APP_FILE='onsite-v1.0.html';
+const KVI_APP_FILE='kvi-premises-v1.0.html';\nasync function openPrivateModule(){\n    let html=await r.text();\n    const identity=buildIdentity();\n}</script>";
 const result=prepareV2LoginSource(source);
 assert.match(result,/onsite-v2\.0\.html/);
 assert.match(result,/security module missing/);
+assert.match(result,/data-sw2-app-gate/);
+assert.match(result,/approval\.approved !== true/);
+assert.match(result,/KVI_APP_FILE='kvi-premises-v1\.0\.html'/);
 assert.match(result,/const identity=buildIdentity/);
 assert.throws(()=>prepareV2LoginSource(source.replace('onsite-v1.0','different')));
 console.log('Current login staging patch checks passed');
