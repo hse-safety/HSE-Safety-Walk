@@ -40,7 +40,8 @@ jobs:
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.mjs
           ! grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
-          test -s onsite-v2.0.html
+          test ! -e onsite-v2.0.html
+          ! grep -R -l 'raw.githubusercontent.com/hse-safety/HSE-Safety-Walk/safety-walk-2-secure-html-staging/onsite-v2.0.html' sw2-preview/ sw2/ || exit 1
           test -f safety-login.html
 
   browser-smoke:
