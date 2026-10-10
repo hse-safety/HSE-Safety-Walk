@@ -1,3 +1,4 @@
+import { validateApprovalResponse } from './approval-response.mjs';
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, REPORT_KEY_ENDPOINT } from './config.mjs';
 export const sw2Client=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
@@ -27,6 +28,5 @@ export async function approvalApi(action,fields={}){
   const body=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(body.error||'Safety Walk approval failed ('+response.status+')');
   // HTTP success is not proof of approval. Every caller of status must fail closed.
-  if(action==='status' && body.approved!==true)throw Error('Safety Walk access has not been approved.');
-  return body;
+  return validateApprovalResponse(action,body);
 }
