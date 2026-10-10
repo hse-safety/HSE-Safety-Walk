@@ -7,7 +7,7 @@ async function cacheModuleGraph(url,cache,seen=new Set()){
  const r=await fetch(url,{cache:'reload',mode:'cors'});if(!r.ok)throw Error('Offline dependency unavailable');
  await cache.put(url,r.clone());const source=await r.text();
  const imports=[...source.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g)].map(x=>x[1]);
- for(const spec of imports){const child=new URL(spec,url);if(child.origin===new URL(url).origin||child.origin==='https://cdn.jsdelivr.net')await cacheModuleGraph(child.href,cache,seen);}
+ for(const spec of imports){if(!/^(?:\.?\.?\/|https?:\/\/)/.test(spec))continue;const child=new URL(spec,url);if(child.origin===new URL(url).origin||child.origin==='https://cdn.jsdelivr.net')await cacheModuleGraph(child.href,cache,seen);}
 }
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(NAME);await cache.addAll(LOCAL.map(p=>new URL(p,ROOT).href));await cacheModuleGraph('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm',cache);await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const name of await caches.keys())if(name.startsWith('safety-walk-2-licensed-')&&name!==NAME)await caches.delete(name);await self.clients.claim()})()));
