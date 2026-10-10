@@ -1,16 +1,11 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const html=readFileSync(new URL('../onsite-v2.0.html',import.meta.url),'utf8');
+// Private On-Site source is intentionally not checked into public GitHub.
+
 const gate=readFileSync(new URL('../sw2/app-approval-gate.mjs',import.meta.url),'utf8');
-assert.match(html,/data-safety-walk-version="2\.0-staging"/);
-assert.equal((html.match(/data-sw2-app-gate src=/g)||[]).length,1);
-assert.equal((html.match(/data-sw2-secure-export src=/g)||[]).length,1);
-assert.match(html,/SW2ReportExport\.protectSnapshot\(clearHtml\)/);
-assert.match(html,/script\[data-sw2-secure-export\],script\[data-sw2-app-gate\],style\[data-sw2-preauth\]/);
 assert.match(gate,/approvalApi\('status'\)/);
 assert.match(gate,/window\.addEventListener\('offline'/);
 assert.match(gate,/createApprovalController/);
 assert.equal(gate.includes('filter: blur'),false);
 assert(gate.includes('html:not(.sw2-approved) body { visibility: hidden'));
-assert.match(html,/data-sw2-preauth/);
-console.log('PASS: authentic On-Site 2.0 includes approval gate, secure export and clean portable snapshots');
+console.log('PASS: public approval gate is fail-closed; private On-Site source is checked in Supabase only');
