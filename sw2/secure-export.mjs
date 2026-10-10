@@ -13,7 +13,7 @@ const canonical=html=>html.replace(/data-audit-storage-key="[^"]*"/g,'data-audit
 function snapshot(build){observer?.disconnect();try{return build()}finally{observe()}}
 function observe(){if(observer&&document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['src','checked','value','selected'],characterData:true});}
 function preparationState(busy){const b=window.__SW2_SEND_BUTTON;if(!b||sharing)return;b.disabled=busy;b.textContent=busy?'Preparing…':'SEND';}
-function invalidate(){preparationState(true);generation++;dirty=true;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
+function invalidate(event){if(event?.type==='change'&&prepared&&window.__SW2_SNAPSHOT&&canonical(snapshot(window.__SW2_SNAPSHOT))===prepared.fingerprint){dirty=false;clearTimeout(debounce);preparationState(false);return;}preparationState(true);generation++;dirty=true;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
 async function prepare(build=window.__SW2_SNAPSHOT,name=window.__SW2_FILENAME) {
  if(!build||!name||!document.documentElement.classList.contains('sw2-approved'))return null;
  if(job)return job;
