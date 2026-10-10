@@ -20,6 +20,8 @@ async function verify(){
   if(!response.ok)throw Error('Access denied');
   const result=await response.json();
   if(result.approved!==true)throw Error('Not approved');
+  const original=window.__HSE_SW_IDENTITY?.access;
+  if(!original||result.access?.office!==original.office||result.access?.warehouse!==original.warehouse)throw Error('Permissions changed');
   state(true);
  }catch{state(false)}
  finally{checking=false}
