@@ -28,6 +28,9 @@ export function prepareV2LoginSource(source) {
       });
       const approval=await check.json().catch(()=>({}));
       if (!check.ok || approval.approved !== true) throw new Error('On-Site 2.0 approval denied.');
+      // Mirror the already-proven iPhone preview's On-Site display version fix.
+      // No inspection content, SEND workflow or KVI functionality is changed.
+      html=html.replace("const SAFETY_WALK_VERSION = '1.0';", "const SAFETY_WALK_VERSION = '2.0';");
     }
     const identity=buildIdentity();`);
  return result.replaceAll('SAFETY WALK 1.0','SAFETY WALK 2.0').replaceAll('Safety Walk 1.0','Safety Walk 2.0');
