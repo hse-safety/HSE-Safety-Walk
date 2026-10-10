@@ -22,7 +22,8 @@ export function prepareV1Module(source,module='onsite') {
         return window.SW2ReportExport.shareSnapshot(buildStandaloneHtmlSnapshot,buildAirDropFileName,airDropBtn);
     }
     window.__SW2_SNAPSHOT=()=>buildStandaloneHtmlSnapshot();
-    window.__SW2_FILENAME=()=>buildAirDropFileName();`);
+    window.__SW2_FILENAME=()=>buildAirDropFileName();
+    window.__SW2_SEND_BUTTON=airDropBtn;`);
  const script='<scr'+'ipt',end='</scr'+'ipt>';
  const hooks=`<style data-sw2-app-gate>html:not(.sw2-approved) body{visibility:hidden!important}</style>${script} data-sw2-app-gate>window.__SW2_MODULE=${JSON.stringify(module)};${end}${script} type="module" data-sw2-app-gate src="${BASE}sw2/app-approval-gate.mjs">${end}${script} type="module" data-sw2-secure-export src="${BASE}sw2/secure-export.mjs">${end}`;
  html=html.replace('</head>',hooks+'</head>');

@@ -1,11 +1,15 @@
-const NAME='safety-walk-2-licensed-simple-v2';
+const NAME='safety-walk-2-licensed-simple-v3';
 const ROOT=new URL('./',self.location.href);
 const SHELL=new URL('safety-login.html',ROOT).href;
 const LOCAL=['safety-login.html','index.html','manifest.webmanifest','sw2/auth.mjs','sw2/approval-response.mjs','sw2/config.mjs','sw2/licensing.mjs','sw2/device-store.mjs','sw2/offline-lease.mjs','sw2/app-approval-gate.mjs','sw2/secure-export.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/launch.mjs','sw2/prepare-v1-module.mjs'];
 async function cacheModuleGraph(url,cache,seen=new Set()){
  if(seen.has(url))return;seen.add(url);
  const r=await fetch(url,{cache:'reload',mode:'cors'});if(!r.ok)throw Error('Offline dependency unavailable');
- await cache.put(url,r.clone());const source=await r.text();
+ const source=await r.text();
+ // Safari can rebase a worker-returned external module onto this origin.
+ // Absolute import URLs keep the cached dependency graph stable online/offline.
+ const rewritten=source.replace(/(from\s*|import\s*)["']([^"']+)["']/g,(all,prefix,spec)=>/^(?:\.?\.?\/|https?:\/\/)/.test(spec)?prefix+JSON.stringify(new URL(spec,url).href):all);
+ await cache.put(url,new Response(rewritten,{headers:{'Content-Type':'text/javascript; charset=utf-8','Access-Control-Allow-Origin':'*'}}));
  const imports=[...source.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g)].map(x=>x[1]);
  for(const spec of imports){if(!/^(?:\.?\.?\/|https?:\/\/)/.test(spec))continue;const child=new URL(spec,url);if(child.origin===new URL(url).origin||child.origin==='https://cdn.jsdelivr.net')await cacheModuleGraph(child.href,cache,seen);}
 }

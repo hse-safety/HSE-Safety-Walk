@@ -8,11 +8,12 @@ export async function protectSnapshot(clearHtml) {
  await approvalApi('register',{report_id:encrypted.id,key_b64:key});
  return buildCarrierHtml(encrypted,REPORT_VIEWER_URL);
 }
-let prepared=null,job=null,dirty=true,generation=0,debounce,observer;
+let prepared=null,job=null,dirty=true,generation=0,debounce,observer,sharing=false;
 const canonical=html=>html.replace(/data-audit-storage-key="[^"]*"/g,'data-audit-storage-key="snapshot"');
 function snapshot(build){observer?.disconnect();try{return build()}finally{observe()}}
 function observe(){if(observer&&document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['src','checked','value','selected'],characterData:true});}
-function invalidate(){generation++;dirty=true;prepared=null;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
+function preparationState(busy){const b=window.__SW2_SEND_BUTTON;if(!b||sharing)return;b.disabled=busy;b.textContent=busy?'Preparing…':'SEND';}
+function invalidate(){preparationState(true);generation++;dirty=true;prepared=null;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
 async function prepare(build=window.__SW2_SNAPSHOT,name=window.__SW2_FILENAME) {
  if(!build||!name||!document.documentElement.classList.contains('sw2-approved'))return null;
  if(job)return job;
@@ -21,8 +22,8 @@ async function prepare(build=window.__SW2_SNAPSHOT,name=window.__SW2_FILENAME) {
   if(ticket!==generation)return null;
   const filename=name();let file=new File([carrier],filename,{type:'text/html'});
   if(navigator.canShare&&!navigator.canShare({files:[file]}))file=new File([carrier],filename,{type:'application/octet-stream'});
-  prepared={fingerprint,carrier,filename,file};dirty=false;return prepared;
- })().finally(()=>{job=null;if(dirty&&ticket!==generation){clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180)}});
+  prepared={fingerprint,carrier,filename,file};dirty=false;preparationState(false);return prepared;
+ })().catch(e=>{preparationState(false);throw e;}).finally(()=>{job=null;if(dirty&&ticket!==generation){clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180)}});
  return job;
 }
 function download(item){const url=URL.createObjectURL(new Blob([item.carrier],{type:'text/html'})),a=document.createElement('a');a.href=url;a.download=item.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),8000);}
@@ -39,13 +40,13 @@ export function shareSnapshot(build,name,button){
  const label=button.textContent;
  let result;
  try{result=navigator.share({title:'HSE Safety Walk',files:[item.file]});}catch(e){result=Promise.reject(e);}
- button.disabled=true;button.textContent='Choose…';
- return Promise.resolve(result).catch(error=>{if(error?.name==='AbortError')return;download(item);alert('The protected HTML file has been downloaded. Share it from Files.');}).finally(()=>{button.disabled=false;button.textContent=label});
+ sharing=true;button.disabled=true;button.textContent='Choose…';
+ return Promise.resolve(result).catch(error=>{if(error?.name==='AbortError')return;download(item);alert('The protected HTML file has been downloaded. Share it from Files.');}).finally(()=>{sharing=false;button.disabled=false;button.textContent=label;preparationState(dirty);});
 }
 window.SW2ReportExport=Object.freeze({protectSnapshot,shareSnapshot});
 onApprovalChange(({approved})=>{if(approved&&dirty){clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),50)}else if(!approved){generation++;prepared=null;dirty=true;}});
 function install(){
- observer=new MutationObserver(invalidate);observe();
+ observer=new MutationObserver(changes=>{const button=window.__SW2_SEND_BUTTON;if(changes.some(m=>!button||!(m.target===button||button.contains(m.target))))invalidate()});observe();
  for(const event of ['input','change'])document.addEventListener(event,invalidate,true);
  invalidate();
 }

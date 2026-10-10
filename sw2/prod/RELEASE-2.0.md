@@ -6,7 +6,7 @@ The active profile and module approval in User Management authorise every online
 
 Encrypted report keys remain in the existing protected key table. Reports themselves stay on the user's device. Previously opened reports and modules work offline until expiry; offline report-key registrations synchronise after approved reconnection. The first opening of a report on a receiving computer needs an online check.
 
-SEND prepares an encrypted file in the background, then invokes the native share API directly in the tap. If preparation has not finished after a recent change, the same SEND button asks for another tap once ready. Stale report contents are never shared. Browser refusal to share still downloads only encrypted HTML. Desktop HTML retains its PDF controls.
+SEND prepares an encrypted file in the background, then invokes the native share API directly in the tap. The existing SEND button shows Preparing while a recent edit is being protected and becomes available when ready. Stale report contents are never shared. Browser refusal to share still downloads only encrypted HTML. Desktop HTML retains its PDF controls.
 
 Backend: sw2-license-simple. Existing private 1.0 files, user accounts and access selections are not overwritten. The installed PWA identity is retained; close and restart to load the new shell.
 
