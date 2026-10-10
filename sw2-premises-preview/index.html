@@ -20,7 +20,12 @@ try{
  const grant=await permission.json();
  if(grant.approved!==true||!(grant.access?.office===true||grant.access?.warehouse===true))throw Error('Facility-adgang mangler.');
  const displayName=data.user.user_metadata?.full_name||data.user.email;
- window.__HSE_SW_IDENTITY={id:data.user.id,user_id:data.user.id,userId:data.user.id,email:data.user.email,name:displayName,displayName,role:'user',access:{onsite:false,office:grant.access.office===true,warehouse:grant.access.warehouse===true}};
+ const identity={id:data.user.id,user_id:data.user.id,userId:data.user.id,email:data.user.email,name:displayName,displayName,role:'user',access:{onsite:false,office:grant.access.office===true,warehouse:grant.access.warehouse===true}};
+ // document.open() can replace document execution state. Ensure the unchanged
+ // Facility access-control script sees its identity before it executes.
+ const injected='<script>window.__HSE_SW_IDENTITY='+JSON.stringify(identity).replace(/</g,'\\u003c')+';<\\/script>';
+ html=html.replace(/<head(\\s[^>]*)?>/i,matched=>matched+injected);
+ window.__HSE_SW_IDENTITY=identity;
  document.open();document.write(html);document.close();
 }catch(e){notice.textContent=e.message}
 });
