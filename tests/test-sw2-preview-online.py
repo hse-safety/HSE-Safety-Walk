@@ -35,5 +35,10 @@ with sync_playwright() as p:
  assert 'result.access?.office!==original.office' in gate_source
  assert 'result.access?.warehouse!==original.warehouse' in gate_source
  assert 'state(false)' in gate_source
- print('PASS: preview login, anonymous access denied for both modules and keys, Facility grant-change lock present')
+ onsite_loader=page.request.get(URL,timeout=20000).text()
+ assert "const SAFETY_WALK_VERSION = '2.0';" in onsite_loader, 'On-Site 2.0 label transformation missing'
+ facility_loader=page.request.get('https://hse-safety.github.io/HSE-Safety-Walk/sw2-premises-preview/',timeout=20000)
+ assert facility_loader.status==200
+ assert 'Office / Warehouse Facility' in facility_loader.text()
+ print('PASS: approvals, anonymous denial, Facility revocation gate and preview version transformation')
  browser.close()
