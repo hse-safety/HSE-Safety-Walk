@@ -34,7 +34,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  denied=await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval();return false}catch{return true}});assert(denied,'Revoked user reused cached licence');
  console.log('PASS: real browser device keys/IndexedDB encryption, user-only approval without server device registration, offline app/report opening and encrypted key queue, lease expiry, reconnect synchronisation and revoked-user cache invalidation.');
  // Confirm the complete PWA shell and dependency graph actually work offline.
- const shellContext=await browser.newContext(),shell=await shellContext.newPage();
+ const shellContext=await browser.newContext(),shell=await shellContext.newPage();shell.setDefaultNavigationTimeout(30000);
  const shellErrors=[];shell.on('pageerror',e=>shellErrors.push(String(e)));shell.on('console',m=>console.log('SHELL',m.type(),m.text()));shell.on('requestfailed',r=>console.log('SHELL REQUEST FAILED',r.url(),r.failure()));
  await shell.goto(base+'/safety-login.html');
  try{await shell.waitForFunction(()=>navigator.serviceWorker.controller?.state==='activated',null,{timeout:30000});}catch(error){console.log('SHELL DIAGNOSTICS',shellErrors,await shell.evaluate(async()=>({offlineReady:document.documentElement.dataset.sw2OfflineReady,registrations:(await navigator.serviceWorker.getRegistrations()).map(r=>({scope:r.scope,installing:r.installing?.state,waiting:r.waiting?.state,active:r.active?.state})),caches:await caches.keys()})));throw error;}
