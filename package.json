@@ -1,1 +1,12 @@
-{"name":"safety-walk-2-security","private":true,"version":"2.0.0","devDependencies":{"playwright":"1.56.0"},"scripts":{"test:license":"node tests/test-sw2-device-license.mjs && node tests/test-sw2-licensing-browser.cjs"}}
+{
+  "name": "safety-walk-2-security",
+  "private": true,
+  "version": "2.0.0",
+  "devDependencies": {
+    "playwright": "1.56.0"
+  },
+  "scripts": {
+    "test:license": "node tests/test-sw2-simple.mjs app-v137.html && node tests/test-sw2-offline-lease.mjs && node tests/test-sw2-report-core.mjs && node --experimental-vm-modules tests/test-sw2-share.mjs",
+    "test:browser": "node tests/test-sw2-simple-browser.cjs"
+  }
+}

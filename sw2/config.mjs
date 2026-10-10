@@ -8,5 +8,5 @@ export const REPORT_VIEWER_URL = new URL('./report-viewer-v2.html', import.meta.
 
 // Optional build pin. Otherwise trust the fixed HTTPS server endpoint online and
 // keep its public key in authenticated device storage for offline verification.
-export const LICENSE_ENDPOINT = SUPABASE_URL + '/functions/v1/sw2-license';
+export const LICENSE_ENDPOINT = SUPABASE_URL + '/functions/v1/sw2-license-simple';
 export const LICENSE_PUBLIC_KEY = null;

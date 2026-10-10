@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html data-sw2-release="2.0-simple" lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -1014,10 +1014,9 @@ async function openLegacyPrivateModule(fileName,label,allowed){
 }
 
 async function openPrivateModule(file,label,allowed){
- if(file!==ONSITE_APP_FILE)return openLegacyPrivateModule(file,label,allowed);
- if(!allowed()){status('readyStatus','On-Site approval required.');return;}
- status('readyStatus','Opening On-Site…',true);
- try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity());}catch(error){status('readyStatus',error.message);}
+ if(!allowed()){status('readyStatus',label+' approval required.');return;}
+ status('readyStatus','Opening '+label+'…',true);
+ try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity(),file===ONSITE_APP_FILE?'onsite':'facility');}catch(error){status('readyStatus',error.message);}
 }
 $('login').onclick=async()=>{
   status('loginStatus','');
@@ -1584,5 +1583,5 @@ async function boot(){
 if('serviceWorker' in navigator)void navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});
 if(navigator.onLine!==false)boot();else{try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite();}catch(error){status('loginStatus',error.message);}}
 </script>
-<script type="module">import {attachDeviceManagement} from "./sw2/device-management.mjs";import {attachLogout} from "./sw2/launch.mjs";attachDeviceManagement(document.getElementById("adminCard"));attachLogout(document.getElementById("logout"));</script></body>
+<script type="module">import {attachLogout} from "./sw2/launch.mjs";attachLogout(document.getElementById("logout"));</script></body>
 </html>

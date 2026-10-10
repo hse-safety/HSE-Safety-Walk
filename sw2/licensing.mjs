@@ -2,6 +2,8 @@ import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,LICENSE_PUBLIC_KEY,LICENSE_ENDPOIN
 import {verifyOfflineLease} from './offline-lease.mjs';
 import {deviceStore} from './device-store.mjs';
 const project=new URL(SUPABASE_URL).hostname.split('.')[0],encoder=new TextEncoder();
+let selectedModule=location.pathname.includes('report-viewer')?'report':'onsite';
+const activeModule=()=>window.__SW2_MODULE||selectedModule;
 let context,serial=Promise.resolve(),epoch=0;const listeners=new Set();
 const b64=b=>{let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode(...b.subarray(i,i+8192));return btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')};
 export const onApprovalChange=fn=>{listeners.add(fn);return()=>listeners.delete(fn)};
@@ -17,11 +19,9 @@ async function call(action,fields={}){
  const jwt=current?.access_token;if(sessionError||current?.user?.id!==ctx.user||!jwt||!sessionMatchesProject(current,SUPABASE_URL))throw Error('Login required');
  const headers={apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+jwt,'Content-Type':'application/json'};
  async function request(body){const r=await fetch(LICENSE_ENDPOINT,{method:'POST',cache:'no-store',headers,body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok){const err=Error(data.error||'Approval unavailable');err.status=r.status;throw err;}return data;}
- const {challenge}=await request({action:'challenge',device_id:device.id});
- const signature=b64(new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},device.signing.privateKey,encoder.encode(JSON.stringify({challenge,action,fields})))));
- return request({action,fields,challenge,signature,device_id:device.id});
+ return request({action,fields:{...fields,module:activeModule()},device_id:device.id,public_key_jwk:device.publicJwk});
 }
-export async function registerDevice(){const ctx=await state(),dev=await ctx.store.device();return call('device-register',{public_key_jwk:dev.publicJwk,label:/iPhone|iPad/.test(navigator.userAgent)?'iPhone / iPad':'Desktop browser'});}
+export async function registerDevice(){return {status:'approved'};}
 async function effectiveTime(ctx){const saved=await ctx.store.get('lease'),clock=await ctx.store.get('clock');if(!saved)throw Error('Offline licence required');
  const wall=Date.now();if(clock&&wall<clock.wall-60000)throw Error('Device clock changed; reconnect to renew approval');
  const offset=saved.serverTime-saved.wall;const mono=ctx.anchor?ctx.anchor.serverTime+(performance.now()-ctx.anchor.mono):0;
@@ -37,12 +37,12 @@ async function trustedKey(ctx,online=false){
  return key;
 }
 async function offlineApproval(){const ctx=await state(),dev=await ctx.store.device(),{saved,now}=await effectiveTime(ctx);
- const lease=await verifyOfflineLease(saved.compact,await trustedKey(ctx),{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now});
+ const lease=await verifyOfflineLease(saved.compact,await trustedKey(ctx),{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now,module:activeModule()});
  // Demonstrate possession of the browser-bound private key for this lease.
  const key=await crypto.subtle.importKey('jwk',lease.devicePublicJwk,{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
  const nonce=crypto.getRandomValues(new Uint8Array(32)),proof=await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},dev.signing.privateKey,nonce);
  if(!await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,proof,nonce))throw Error('Offline device mismatch');
- return {approved:true,offline:true,expires_at:lease.expiresAt,server_time:now};
+ return {approved:true,offline:true,modules:lease.modules,expires_at:lease.expiresAt,server_time:now};
 }
 export async function requireApproval({renew=false}={}){
  const ticket=epoch;
@@ -51,9 +51,9 @@ export async function requireApproval({renew=false}={}){
   if(ticket!==epoch)throw Error('Approval superseded');
   const ctx=await state();try{
    // Online checks always reach the server; caching is exclusively for offline operation.
-   await registerDevice();const data=await call('lease');const dev=await ctx.store.device();
+   const data=await call('lease');const dev=await ctx.store.device();
    const trusted=await trustedKey(ctx,true);
-   await verifyOfflineLease(data.lease,trusted,{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now:data.server_time});
+   await verifyOfflineLease(data.lease,trusted,{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now:data.server_time,module:activeModule()});
    if(ticket!==epoch)throw Error('Approval superseded');
    await ctx.store.seal('signing-key',trusted);
    await ctx.store.put('lease',{compact:data.lease,serverTime:data.server_time,wall:Date.now()});
@@ -64,20 +64,20 @@ export async function requireApproval({renew=false}={}){
 }
 export async function licenceApi(action,fields={}){
  if(action==='status')return requireApproval();
- await requireApproval();const ctx=await state();
+ if(navigator.onLine===false)await requireApproval();const ctx=await state();
  if(action==='register'){
   await ctx.store.seal('report:'+fields.report_id,{key_b64:fields.key_b64});
   if(navigator.onLine===false){await ctx.store.seal('pending:'+fields.report_id,fields);return {registered:true,pending:true};}
-  const result=await call('register',fields);return result;
+  try{return await call('register',fields)}catch(e){if(e.status===401||e.status===403){await ctx.store.purge();emit(false,e.message)}throw e;}
  }
  if(action==='open'){
   if(navigator.onLine===false){const key=await ctx.store.unseal('report:'+fields.report_id);if(!key)throw Error('This report needs one online opening on this approved device');return key;}
-  const result=await call('open',fields);await ctx.store.seal('report:'+fields.report_id,result);return result;
+  try{const result=await call('open',fields);await ctx.store.seal('report:'+fields.report_id,result);return result;}catch(e){if(e.status===401||e.status===403){await ctx.store.purge();emit(false,e.message)}throw e;}
  }
  throw Error('Unsupported report operation');
 }
 async function flushPending(){const ctx=await state();for(const [key]of await ctx.store.entries())if(String(key).startsWith('pending:')){const fields=await ctx.store.unseal(key);await call('register',fields);await ctx.store.remove(key);}}
-export async function loadPrivateApp(){await requireApproval();const ctx=await state();if(navigator.onLine===false){const html=await ctx.store.unseal('app');if(!html)throw Error('Open this app online once on the approved device');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal('app',html);return html;}
+export async function loadPrivateApp(module='onsite'){selectedModule=module;window.__SW2_MODULE=module;await requireApproval();const ctx=await state(),cache='app:'+module;if(navigator.onLine===false){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
 export async function forgetApproval(){epoch++;if(context)await context.store.purge();emit(false,'Logged out');}
 export async function adminDevices(action,fields={}){await registerDevice();return call(action,fields);}
 export function invalidateApproval(){epoch++;emit(false,'Checking current approval');}

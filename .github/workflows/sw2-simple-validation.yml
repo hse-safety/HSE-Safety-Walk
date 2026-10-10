@@ -1,0 +1,32 @@
+name: Safety Walk 2.0 simple release verification
+on:
+  push:
+    branches: [sw2-simple-release, main]
+    paths: [sw2/**, supabase/functions/sw2-license-simple/**, tests/test-sw2-simple*, tests/test-sw2-share.mjs, safety-login.html, offline-sw.js, .github/workflows/sw2-simple-validation.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - name: User approval, revocation, original inspection and encrypted sharing
+        run: |
+          node tests/test-sw2-simple.mjs app-v137.html
+          node tests/test-sw2-offline-lease.mjs
+          node tests/test-sw2-report-core.mjs
+          node tests/test-sw2-rest-response.mjs
+          node --experimental-vm-modules tests/test-sw2-share.mjs
+          node tests/test-sw2-simple-browser.cjs
+      - name: Original private modules prepare successfully; anonymous access denied
+        run: |
+          curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'
+          code=$(curl -sS --max-time 30 -o /tmp/denied.json -w '%{http_code}' -H 'Content-Type: application/json' -d '{"action":"module"}' 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple')
+          test "$code" = 401

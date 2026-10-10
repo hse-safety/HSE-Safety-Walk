@@ -10,7 +10,7 @@ const b64urlBytes = part => {
  return Uint8Array.from(raw,c=>c.charCodeAt(0));
 };
 const json = bytes=>JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,projectRef,devicePublicJwk,now=Date.now(),maxHours=24}={}) {
+export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,projectRef,devicePublicJwk,now=Date.now(),maxHours=24,module='onsite'}={}) {
  if(typeof compact!=='string'||compact.length>6000)throw Error('Invalid offline licence');
  const parts=compact.split('.');
  if(parts.length!==3)throw Error('Invalid offline licence');
@@ -33,5 +33,6 @@ export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,proj
  if(!devicePublicJwk||devicePublicJwk.d||!payload.device_public_key)throw Error('Device binding required');
  const fingerprint=async j=>{const canonical=JSON.stringify({crv:j.crv,kty:j.kty,x:j.x,y:j.y});const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical)));let b='';for(const n of hash)b+=String.fromCharCode(n);return btoa(b).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');};
  if(payload.device_key!==await fingerprint(devicePublicJwk)||payload.device_key!==await fingerprint(payload.device_public_key))throw Error('Device binding mismatch');
- return Object.freeze({userId:payload.sub,deviceId:payload.device_id,devicePublicJwk:payload.device_public_key,expiresAt:payload.exp*1000});
+ if(payload.modules?payload.modules[module]!==true:module!=='onsite')throw Error('Module not approved by offline licence');
+ return Object.freeze({modules:payload.modules||{onsite:true},userId:payload.sub,deviceId:payload.device_id,devicePublicJwk:payload.device_public_key,expiresAt:payload.exp*1000});
 }

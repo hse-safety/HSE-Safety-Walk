@@ -1,4 +1,22 @@
-# Safety Walk 2.0 — complete licensed release candidate
+# Safety Walk 2.0 — simple user approval release
+
+This release uses the original private onsite-v1.0.html and kvi-premises-v1.0.html as its inspection source. Original inspection markup, notes, photographs, observations, identity fields and PDF code are retained. Security hooks and the displayed version are applied when the authorised module is loaded.
+
+The active profile and module approval in User Management authorise every online operation. There is no administrator approval for each device, and the new online flow does not register a server device entry. Non-exportable local keys retain encrypted offline caches and verify the signed maximum 24-hour offline lease silently.
+
+Encrypted report keys remain in the existing protected key table. Reports themselves stay on the user's device. Previously opened reports and modules work offline until expiry; offline report-key registrations synchronise after approved reconnection. The first opening of a report on a receiving computer needs an online check.
+
+SEND prepares an encrypted file in the background, then invokes the native share API directly in the tap. If preparation has not finished after a recent change, the same SEND button asks for another tap once ready. Stale report contents are never shared. Browser refusal to share still downloads only encrypted HTML. Desktop HTML retains its PDF controls.
+
+Backend: sw2-license-simple. Existing private 1.0 files, user accounts and access selections are not overwritten. The installed PWA identity is retained; close and restart to load the new shell.
+
+Verification includes central approval/revocation, encryption, lease expiry, module permissions, V1 inspection markup and synchronous sharing tests. WebKit tests use isolated mock users for local cache encryption, offline app/report access and reconnect synchronisation. Production health checks both actual private V1 modules without exposing their contents. Native iPhone Mail/AirDrop completion requires the user's device and is not claimed as an automated test.
+
+The older notes below describe the superseded device-approval design and are retained as history.
+
+---
+
+# Previous device-approval release
 
 This release adds only licensing/device approval and cryptographic access controls. The login body, inspection content, workflows, existing app share/export and desktop PDF controls remain unchanged. KVI retains its existing module route.
 
@@ -28,6 +46,6 @@ The database signing secret is generated inside the server and never put in this
 
 ## Validation boundary
 
-Server cryptography and permission/expiry tests passed locally. The TEST project's licence function and restricted database/Vault infrastructure are installed; production infrastructure has not been activated. Browser integration runs in the staging CI because this local runtime cannot download its Chromium binary. Signed-in Safari/iPhone production execution is not claimed until performed after coordinated activation.
+Server cryptography and permission/expiry tests passed locally. The TEST project's licence function and restricted database/Vault infrastructure are installed; production infrastructure is activated and the full 2.0 client is published. Real Chromium integration passed in staging CI: non-exportable device keys, encrypted IndexedDB storage, copied-cache denial, offline app/report opening, encrypted key queue and reconnect synchronisation, licence expiry, user revocation, full PWA offline shell restart, and report decryption/editing/session lock. The local runtime cannot download its Chromium binary. Signed-in Safari/iPhone production execution is not claimed until performed after coordinated activation.
 
 Offline revocation is necessarily delayed until reconnection or expiry. Browser storage/clock controls provide protection against normal copying and accidental clock changes, not a trusted hardware clock or a hostile modification of an already decrypted authorised session. PDFs and information already read by an authorised user cannot be recalled.
