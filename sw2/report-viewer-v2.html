@@ -43,13 +43,15 @@ function closeReport(){
   $('viewerScreen').hidden=true;$('workplace').hidden=false;
 }
 async function checkSession(){
-  closeReport();$('workplace').hidden=false;
+  closeReport();const checkEpoch=accessEpoch;$('workplace').hidden=false;
   try{
     const {data:{user}}=await sw2Client.auth.getUser();
     if(!user)throw Error('Log ind for at åbne en rapport.');
-    await approvalApi('status');show('loginScreen',false);show('pickScreen',true);
+    await approvalApi('status');
+    if(checkEpoch!==accessEpoch)return;
+    show('loginScreen',false);show('pickScreen',true);
     notice('Godkendt. Vælg en krypteret rapport.');
-  }catch(error){show('loginScreen',true);show('pickScreen',false);notice(error.message);}
+  }catch(error){if(checkEpoch!==accessEpoch)return;show('loginScreen',true);show('pickScreen',false);notice(error.message);}
 }
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault();notice('Kontrollerer godkendelse…');
@@ -58,7 +60,7 @@ $('loginForm').addEventListener('submit',async e=>{
  if(error){notice('Login mislykkedes.');return;}
  await checkSession();
 });
-$('logout').onclick=async()=>{closeReport();await sw2Client.auth.signOut();$('reportFile').value='';await checkSession();};
+$('logout').onclick=async()=>{closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logger ud…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Kunne ikke bekræfte logout. Luk denne fane.');}};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
 async function verify(){await approvalApi('status');}
@@ -99,6 +101,9 @@ window.addEventListener('message',async event=>{
   await verify();
   const {package:pkg,key}=await encryptHtml(html);
   await approvalApi('register',{report_id:pkg.id,key_b64:key});
+  if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
+  // Re-check after the network operation; a revoked account must not receive a new export.
+  await verify();
   if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
   const carrier=buildCarrierHtml(pkg,location.href);
   const object=URL.createObjectURL(new Blob([carrier],{type:'text/html'}));
