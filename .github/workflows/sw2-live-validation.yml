@@ -3,54 +3,39 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - safety-login.html
-      - sw.js
-      - index.html
-      - sw2/**
-      - .github/workflows/sw2-live-validation.yml
+    paths: [safety-login.html, offline-sw.js, index.html, sw2/**, .github/workflows/sw2-live-validation.yml]
 permissions:
   contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check released code and unchanged KVI
-        shell: bash
+      - name: Verify simple release code
         run: |
-          set -euo pipefail
-          grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" safety-login.html
-          grep -q "const KVI_APP_FILE='kvi-premises-v1.0.html';" safety-login.html
-          grep -q 'approval.approved !== true' safety-login.html
-          grep -q 'data-sw2-app-gate' safety-login.html
-          grep -Eq "hse-safety-walk-v15[2-9](-sw2)?" sw.js
-          for f in sw2/*.mjs; do node --check "$f"; done
-          node <<'JS'
-          const fs=require('fs'),cp=require('child_process');
-          const html=fs.readFileSync('safety-login.html','utf8');
-          const script=html.match(/<script type="module">([\s\S]*?)<\/script>/);
-          if(!script)throw Error('Missing login JavaScript');
-          const stripped=script[1].replace(/^import\s+.*?;\s*$/m,'');
-          const check=cp.spawnSync('node',['--check','--input-type=module'],{input:stripped,encoding:'utf8'});
-          if(check.status!==0)throw Error(check.stderr);
-          JS
-      - name: Verify live Pages login and required modules
-        shell: bash
+          grep -q 'data-sw2-release="2.0-simple"' safety-login.html
+          grep -q 'sw2/vendor/supabase-client.mjs' safety-login.html
+          grep -q 'sw2-license-simple' sw2/config.mjs
+          for f in sw2/*.mjs sw2/vendor/*.mjs; do node --check "$f"; done
+          node --check offline-sw.js
+      - name: Verify deployed release assets
         run: |
-          set -euo pipefail
+          set -eu
           base='https://hse-safety.github.io/HSE-Safety-Walk'
-          for n in {1..12}; do
-            curl -fsSL --max-time 30 "$base/safety-login.html?check=${GITHUB_SHA}" -o /tmp/login.html || true
-            if grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" /tmp/login.html 2>/dev/null; then break; fi
+          for n in $(seq 1 30); do
+            curl -fsSL --max-time 15 "$base/safety-login.html?release=${GITHUB_SHA}" -o /tmp/login.html || true
+            if grep -q 'data-sw2-release="2.0-simple"' /tmp/login.html 2>/dev/null; then break; fi
             sleep 5
           done
-          grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" /tmp/login.html
-          curl -fsSL "$base/sw2/auth.mjs" | grep -q 'validateApprovalResponse'
-          curl -fsSL "$base/sw2/report-core.mjs" | grep -q 'AES-GCM'
-          curl -fsSL "$base/sw2/report-viewer-v2.html" | grep -q 'Beskyttet rapport'
-          echo 'PASS: public release assets are available; private On-Site requires authenticated session'
+          grep -q 'data-sw2-release="2.0-simple"' /tmp/login.html
+          curl -fsSL --max-time 30 "$base/sw2/config.mjs?release=${GITHUB_SHA}" | grep -q 'sw2-license-simple'
+          curl -fsSL --max-time 30 "$base/sw2/auth.mjs?release=${GITHUB_SHA}" | grep -q './vendor/supabase-client.mjs'
+          curl -fsSL --max-time 30 "$base/sw2/vendor/supabase-client.mjs?release=${GITHUB_SHA}" | grep -q 'createClient'
+          curl -fsSL --max-time 30 "$base/offline-sw.js?release=${GITHUB_SHA}" | grep -q 'licensed-simple-v5'
+          curl -fsSL --max-time 30 "$base/sw2/report-viewer-v2.html" | grep -q 'Beskyttet rapport'
+          curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'
+          echo 'PASS: simple release login, local auth dependencies, offline worker, report viewer and original private module preparation are live'

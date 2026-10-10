@@ -2,7 +2,7 @@ name: Safety Walk 2.0 simple release verification
 on:
   push:
     branches: [sw2-simple-release, main]
-    paths: [sw2/**, supabase/functions/sw2-license-simple/**, tests/test-sw2-simple*, tests/test-sw2-share.mjs, safety-login.html, offline-sw.js, .github/workflows/sw2-simple-validation.yml]
+    paths: [sw2/**, supabase/functions/sw2-license-simple/**, tests/test-sw2-*, safety-login.html, offline-sw.js, .github/workflows/sw2-simple-validation.yml]
   workflow_dispatch:
 permissions:
   contents: read
