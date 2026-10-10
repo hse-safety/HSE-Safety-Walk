@@ -41,6 +41,21 @@ with sync_playwright() as p:
  assert frame.locator('#notes').input_value()=='Original'
  frame.locator('#notes').fill('Edited')
  assert frame.locator('#notes').input_value()=='Edited'
+ # Save the edited HTML through the genuine iframe -> parent encrypted-export path.
+ with page.expect_download(timeout=15000) as downloaded:
+  frame.locator('#notes').evaluate("""node => {
+    const html='<!doctype html><html><body><h1 id="report-title">Test inspection</h1><textarea id="notes">'+node.value+'</textarea></body></html>';
+    parent.postMessage({type:'sw2-save-request',html},'*');
+  }""")
+ saved=downloaded.value
+ saved_html=Path(saved.path()).read_text(encoding='utf-8')
+ assert 'Edited' not in saved_html, 'Unencrypted inspection data leaked into exported file'
+ decrypted=page.evaluate("""async carrier=>{
+   const m=await import('./report-core.mjs');
+   const p=m.readCarrierHtml(carrier);
+   return m.decryptHtml(p,window.__sw2Fake.keys[p.id]);
+ }""",saved_html)
+ assert '<textarea id="notes">Edited</textarea>' in decrypted, 'Edited data did not survive protected export'
  page.evaluate('window.__sw2Fake.approved=false;window.dispatchEvent(new Event("online"))')
  page.locator('#viewerScreen').wait_for(state='hidden',timeout=15000)
  assert not page.locator('#inspectionFrame').get_attribute('srcdoc')
