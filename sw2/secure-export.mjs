@@ -8,11 +8,11 @@ export async function protectSnapshot(clearHtml) {
  await approvalApi('register',{report_id:encrypted.id,key_b64:key});
  return buildCarrierHtml(encrypted,REPORT_VIEWER_URL);
 }
-let prepared=null,job=null,dirty=true,generation=0,debounce,observer,sharing=false;
+let prepared=null,job=null,dirty=true,generation=0,debounce,observer,sharing=false,interacting=false;
 const canonical=html=>html.replace(/data-audit-storage-key="[^"]*"/g,'data-audit-storage-key="snapshot"');
 function snapshot(build){observer?.disconnect();try{return build()}finally{observe()}}
 function observe(){if(observer&&document.body)observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['src','checked','value','selected'],characterData:true});}
-function preparationState(busy){const b=window.__SW2_SEND_BUTTON;if(!b||sharing)return;b.disabled=busy;b.textContent=busy?'Preparing…':'SEND';}
+function preparationState(busy){const b=window.__SW2_SEND_BUTTON;if(!b||sharing||interacting)return;b.disabled=busy;b.textContent=busy?'Preparing…':'SEND';}
 function invalidate(event){if(event?.type==='change'&&prepared&&window.__SW2_SNAPSHOT&&canonical(snapshot(window.__SW2_SNAPSHOT))===prepared.fingerprint){dirty=false;clearTimeout(debounce);preparationState(false);return;}preparationState(true);generation++;dirty=true;clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),180);}
 async function prepare(build=window.__SW2_SNAPSHOT,name=window.__SW2_FILENAME) {
  if(!build||!name||!document.documentElement.classList.contains('sw2-approved'))return null;
@@ -46,6 +46,8 @@ export function shareSnapshot(build,name,button){
 window.SW2ReportExport=Object.freeze({protectSnapshot,shareSnapshot});
 onApprovalChange(({approved})=>{if(approved&&dirty){clearTimeout(debounce);debounce=setTimeout(()=>void prepare().catch(()=>{}),50)}else if(!approved){generation++;prepared=null;dirty=true;}});
 function install(){
+ document.addEventListener('pointerdown',event=>{const button=window.__SW2_SEND_BUTTON;if(button&&(event.target===button||button.contains(event.target)))interacting=true;},true);
+ for(const event of ['pointerup','pointercancel'])document.addEventListener(event,()=>setTimeout(()=>{interacting=false;preparationState(dirty)},0),true);
  observer=new MutationObserver(changes=>{const button=window.__SW2_SEND_BUTTON;if(changes.some(m=>!button||!(m.target===button||button.contains(m.target))))invalidate()});observe();
  for(const event of ['input','change'])document.addEventListener(event,invalidate,true);
  invalidate();
