@@ -1,9 +1,8 @@
-const CACHE_NAME = 'hse-safety-walk-v151';
+const CACHE_NAME = 'hse-safety-walk-v152-sw2';
 const APP_SHELL = [
   './',
   './index.html',
   './safety-login.html',
-  './app-v137.html',
   './safety-walk-cover.png?v=150',
   './manifest.webmanifest?v=150',
   './icon-192.png?v=150',
@@ -39,6 +38,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   // Auth, approval and report modules must always prefer a fresh network response.
+  // Do not precache the legacy standalone 1.0 HTML in the Safety Walk 2.0 shell.
   // The existing fail-closed authorization gate remains responsible for offline denial.
   if (request.mode === 'navigate' || url.pathname.includes('/sw2/')) {
     event.respondWith(
