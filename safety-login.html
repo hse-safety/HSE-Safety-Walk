@@ -983,6 +983,9 @@ async function openPrivateModule(fileName,label,allowed){
       html=html.replace(/<head(\\s[^>]*)?>/i,match=>match+'<script>window.__HSE_SW_IDENTITY='+json+';<\/script>');
       window.__HSE_SW_IDENTITY=identity;
     }
+    // The unrendered audit badge in both original forms has a literal V1.0.
+    // Change only the static badge label; the runtime version constant is V2.0.
+    html=html.replace(/(id="auditIdBadge"[^>]*>[^<]*?)V1\\.0(?=<\\/div>)/i,'$1V2.0');
     if(onsite){
       const base=buildIdentity();
       const identity={...base,id:session.user.id,user_id:session.user.id,userId:session.user.id};
