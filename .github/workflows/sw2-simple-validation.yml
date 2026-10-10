@@ -25,6 +25,7 @@ jobs:
           node tests/test-sw2-rest-response.mjs
           node --experimental-vm-modules tests/test-sw2-share.mjs
           node tests/test-sw2-simple-browser.cjs
+          node tests/test-sw2-mobile-share.cjs
       - name: Original private modules prepare successfully; anonymous access denied
         run: |
           curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'

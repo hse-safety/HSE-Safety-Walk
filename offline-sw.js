@@ -1,4 +1,4 @@
-const NAME='safety-walk-2-licensed-simple-v3';
+const NAME='safety-walk-2-licensed-simple-v4';
 const ROOT=new URL('./',self.location.href);
 const SHELL=new URL('safety-login.html',ROOT).href;
 const LOCAL=['safety-login.html','index.html','manifest.webmanifest','sw2/auth.mjs','sw2/approval-response.mjs','sw2/config.mjs','sw2/licensing.mjs','sw2/device-store.mjs','sw2/offline-lease.mjs','sw2/app-approval-gate.mjs','sw2/secure-export.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/launch.mjs','sw2/prepare-v1-module.mjs'];
@@ -13,7 +13,7 @@ async function cacheModuleGraph(url,cache,seen=new Set()){
  const imports=[...source.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g)].map(x=>x[1]);
  for(const spec of imports){if(!/^(?:\.?\.?\/|https?:\/\/)/.test(spec))continue;const child=new URL(spec,url);if(child.origin===new URL(url).origin||child.origin==='https://cdn.jsdelivr.net')await cacheModuleGraph(child.href,cache,seen);}
 }
-self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(NAME);await cache.addAll(LOCAL.map(p=>new URL(p,ROOT).href));await cacheModuleGraph('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm',cache);await self.skipWaiting()})()));
+self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(NAME);await cache.addAll(LOCAL.map(p=>new URL(p,ROOT).href));await cacheModuleGraph(new URL('sw2/vendor/supabase-client.mjs',ROOT).href,cache);await self.skipWaiting()})()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const name of await caches.keys())if(name.startsWith('safety-walk-2-licensed-')&&name!==NAME)await caches.delete(name);await self.clients.claim()})()));
 self.addEventListener('fetch',event=>{
  const req=event.request,url=new URL(req.url);if(req.method!=='GET')return;

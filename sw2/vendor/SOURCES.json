@@ -1,0 +1,14 @@
+{
+  "entry": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm",
+  "dependencies": {
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm": "899e02871e8a0b7d56f1.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/functions-js@2.117.3/+esm": "40642ad86d9e8d75cba9.mjs",
+    "https://cdn.jsdelivr.net/npm/tslib@2.8.1/+esm": "a15e234c726ec0a049aa.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/postgrest-js@2.117.3/+esm": "446676deb0874728a2b6.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/realtime-js@2.117.3/+esm": "360d0ff9e1e911d6272a.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/phoenix@0.4.5/+esm": "6ef48c2acec4c5a5373f.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/storage-js@2.117.3/+esm": "fb98eda4b72c915c959b.mjs",
+    "https://cdn.jsdelivr.net/npm/iceberg-js@0.8.1/+esm": "080ab0958d009d24c114.mjs",
+    "https://cdn.jsdelivr.net/npm/@supabase/auth-js@2.117.3/+esm": "8d299baca94042af7c82.mjs"
+  }
+}

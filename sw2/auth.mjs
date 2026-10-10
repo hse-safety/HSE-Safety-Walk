@@ -1,6 +1,6 @@
 import { licenceApi } from './licensing.mjs';
 import { validateApprovalResponse } from './approval-response.mjs';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm';
+import { createClient } from './vendor/supabase-client.mjs';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, REPORT_KEY_ENDPOINT } from './config.mjs';
 export const sw2Client=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 // Reject a session belonging to a different Supabase project, even if a

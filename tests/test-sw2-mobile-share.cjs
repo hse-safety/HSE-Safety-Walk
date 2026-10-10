@@ -1,0 +1,31 @@
+const {webkit}=require('playwright');
+const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
+(async()=>{
+ const {createHandler,publicKey,bytes}=await import('../supabase/functions/sw2-license-simple/core.mjs');
+ const {prepareV1Module}=await import('../sw2/prepare-v1-module.mjs');
+ const {readCarrierHtml,decryptHtml}=await import('../sw2/report-core.mjs');
+ const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+ const privateJwk=await crypto.subtle.exportKey('jwk',signing.privateKey),trusted=publicKey(await crypto.subtle.exportKey('jwk',signing.publicKey));
+ const user=crypto.randomUUID(),reports=new Map();let active=true,inspection;
+ const db={profile:async()=>({active,role:'user'}),access:async()=>({allow_onsite:true}),report:async id=>reports.get(id),registerReport:async row=>reports.set(row.report_id,row)};
+ const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>{const p=new URL(req.url,'http://localhost').pathname;res.setHeader('Content-Type',/\.m?js$/.test(p)?'text/javascript':'text/html');if(p==='/inspection.html')return res.end(inspection);const file=path.resolve(root,'.'+p);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end()};res.end(fs.readFileSync(file));});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+ inspection=prepareV1Module(fs.readFileSync(path.join(root,'app-v137.html'),'utf8')).replaceAll('https://hse-safety.github.io/HSE-Safety-Walk/',base+'/').replace('</head>','<script>window.__HSE_SW_IDENTITY='+JSON.stringify({id:user,user_id:user,userId:user,name:'Release verification',displayName:'Release verification',email:'verification@example.invalid',role:'user',access:{onsite:true,office:false,warehouse:false}})+'</script></head>');
+ const handler=createHandler({db,getUser:async t=>t==='valid'?{id:user}:null,getSigningKey:async()=>privateJwk,getWrapKey:async()=>btoa('A'.repeat(32)),getModule:async()=>inspection,projectRef:'test',origin:base});
+ const browser=await webkit.launch({headless:true});
+ async function setup(context){
+  await context.route('**/sw2/config.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export const SUPABASE_URL='https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY='public',LICENSE_ENDPOINT='https://test.supabase.co/functions/v1/sw2-license-simple',LICENSE_PUBLIC_KEY=${JSON.stringify(trusted)},REPORT_VIEWER_URL='${base}/sw2/report-viewer-v2.html';`}));
+  await context.route('**/sw2/auth.mjs',r=>r.fulfill({contentType:'text/javascript',body:`import {licenceApi} from './licensing.mjs';export const approvalApi=(a,f={})=>licenceApi(a,f);export const sessionMatchesProject=()=>true;export const sw2Client={auth:{getSession:async()=>({data:{session:JSON.parse(localStorage.getItem('sb-test-auth-token'))}})}};`}));
+  await context.route('https://test.supabase.co/**',async route=>{const q=route.request();if(q.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':base,'Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS'}});const r=await handler(new Request(q.url(),{method:q.method(),headers:q.headers(),body:q.postData()}));await route.fulfill({status:r.status,headers:Object.fromEntries(r.headers),body:await r.text()});});
+  await context.addInitScript(id=>{localStorage.setItem('sb-test-auth-token',JSON.stringify({access_token:'valid',user:{id}}));document.addEventListener('click',()=>{window.__IN_TAP=true;queueMicrotask(()=>window.__IN_TAP=false)},true);Object.defineProperty(navigator,'canShare',{value:()=>true});Object.defineProperty(navigator,'share',{value:async data=>{const active=window.__IN_TAP;window.__SHARED={active,content:await data.files[0].text()};}});},user);
+ }
+ const mobile=await browser.newContext({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',viewport:{width:390,height:844},isMobile:true,hasTouch:true});await setup(mobile);const page=await mobile.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('dialog',d=>d.dismiss());
+ await page.goto(base+'/inspection.html');await page.waitForFunction(()=>document.documentElement.classList.contains('sw2-approved'));
+ const note='WebKit completed inspection note';await page.locator('textarea').first().fill(note);
+ await page.waitForFunction(()=>window.SW2ReportExport&&!document.getElementById('outputActionBtn').disabled&&document.getElementById('outputActionBtn').textContent==='SEND');
+ await page.click('#outputActionBtn');await page.waitForFunction(()=>window.__SHARED);const shared=await page.evaluate(()=>window.__SHARED);assert(shared.active,'SEND lost the live tap');assert(!shared.content.includes(note),'Unencrypted note leaked into carrier');
+ const pkg=readCarrierHtml(shared.content),row=reports.get(pkg.id);assert(row,'Encrypted report key was not registered');const wrap=await crypto.subtle.importKey('raw',bytes(btoa('A'.repeat(32))),'AES-GCM',false,['decrypt']);const key=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(row.nonce_b64),additionalData:new TextEncoder().encode(pkg.id)},wrap,bytes(row.wrapped_key_b64)));assert((await decryptHtml(pkg,Buffer.from(key).toString('base64'))).includes(note));assert.equal(errors.length,0,errors.join('\n'));
+ active=false;await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval()}catch{}});assert(await page.evaluate(()=>document.body.inert&&!document.documentElement.classList.contains('sw2-approved')));active=true;
+ const desktop=await browser.newContext();await setup(desktop);const mac=await desktop.newPage();await mac.goto(base+'/inspection.html');await mac.waitForFunction(()=>document.documentElement.classList.contains('sw2-approved'));assert.equal(await mac.locator('#outputActionBtn').textContent(),'PDF - Long');
+ console.log('PASS: real V1 inspection in mobile WebKit retains notes, shares encrypted HTML in the live tap, locks revoked users, and retains desktop PDF output.');await browser.close();server.close();
+})().catch(e=>{console.error(e);process.exit(1)});
