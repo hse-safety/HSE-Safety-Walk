@@ -1,0 +1,56 @@
+name: Safety Walk 2.0 live release verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - safety-login.html
+      - sw.js
+      - index.html
+      - sw2/**
+      - .github/workflows/sw2-live-validation.yml
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check released code and unchanged KVI
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" safety-login.html
+          grep -q "const KVI_APP_FILE='kvi-premises-v1.0.html';" safety-login.html
+          grep -q 'approval.approved !== true' safety-login.html
+          grep -q 'data-sw2-app-gate' safety-login.html
+          grep -q 'hse-safety-walk-v151' sw.js
+          for f in sw2/*.mjs; do node --check "$f"; done
+          node <<'JS'
+          const fs=require('fs'),cp=require('child_process');
+          const html=fs.readFileSync('safety-login.html','utf8');
+          const script=html.match(/<script type="module">([\s\S]*?)<\/script>/);
+          if(!script)throw Error('Missing login JavaScript');
+          const stripped=script[1].replace(/^import\s+.*?;\s*$/m,'');
+          const check=cp.spawnSync('node',['--check','--input-type=module'],{input:stripped,encoding:'utf8'});
+          if(check.status!==0)throw Error(check.stderr);
+          JS
+      - name: Verify live Pages login and required modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://hse-safety.github.io/HSE-Safety-Walk'
+          for n in {1..12}; do
+            curl -fsSL --max-time 30 "$base/safety-login.html?check=${GITHUB_SHA}" -o /tmp/login.html || true
+            if grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" /tmp/login.html 2>/dev/null; then break; fi
+            sleep 5
+          done
+          grep -q "const ONSITE_APP_FILE='onsite-v2.0.html';" /tmp/login.html
+          curl -fsSL "$base/sw2/auth.mjs" | grep -q 'validateApprovalResponse'
+          curl -fsSL "$base/sw2/report-core.mjs" | grep -q 'AES-GCM'
+          curl -fsSL "$base/sw2/report-viewer-v2.html" | grep -q 'Beskyttet rapport'
+          echo 'PASS: public release assets are available; private On-Site requires authenticated session'
