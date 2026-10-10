@@ -1,4 +1,4 @@
-name: Safety Walk 2.0 staging tests
+name: Safety Walk 2.0 staging security validation
 on:
   push:
     branches:
