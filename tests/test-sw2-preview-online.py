@@ -40,5 +40,8 @@ with sync_playwright() as p:
  facility_loader=page.request.get('https://hse-safety.github.io/HSE-Safety-Walk/sw2-premises-preview/',timeout=20000)
  assert facility_loader.status==200
  assert 'Office / Warehouse Facility' in facility_loader.text()
- print('PASS: approvals, anonymous denial, Facility revocation gate and preview version transformation')
+ retired=page.request.get('https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-preview',timeout=20000)
+ assert retired.status==410, f'Retired embedded-code endpoint returned {retired.status}'
+ assert '<html' not in retired.text().lower(), 'Retired endpoint unexpectedly returned HTML'
+ print('PASS: approvals, anonymous denial, Facility grant-change lock, preview version and retired legacy endpoint')
  browser.close()
