@@ -1,0 +1,51 @@
+name: Generate Safety Walk 2.0 staged login
+on:
+  workflow_dispatch:
+  push:
+    branches: [safety-walk-2-secure-html-staging]
+    paths:
+      - sw2/build-login-v2.mjs
+      - sw2/prepare-login-v2.mjs
+      - .github/workflows/sw2-stage-login.yml
+permissions:
+  contents: write
+jobs:
+  build-staging-login:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild login from original verified file
+        run: |
+          node --check sw2/prepare-login-v2.mjs
+          node --check sw2/build-login-v2.mjs
+          node sw2/build-login-v2.mjs
+          node tests/test-sw2-prepare-login-v2.mjs
+      - name: Check generated inline login syntax
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import {spawnSync} from 'node:child_process';
+          const html=fs.readFileSync('safety-login.html','utf8');
+          const source=html.match(/<script type="module">([\s\S]*?)<\/script>/);
+          if(!source)throw Error('Login module missing');
+          const js=source[1].replace(/^import\s+.*?;\s*$/m,'');
+          const result=spawnSync('node',['--check','--input-type=module'],{input:js,encoding:'utf8'});
+          if(result.status!==0)throw Error(result.stderr||'Invalid JavaScript');
+          console.log('Generated login module syntax passed');
+          JS
+      - name: Commit full login only to Safety Walk 2 staging
+        run: |
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add safety-login.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'SW2: stage complete secure On-Site v2 login'
+            git push origin HEAD:safety-walk-2-secure-html-staging
+          fi
