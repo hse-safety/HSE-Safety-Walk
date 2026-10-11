@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: npx playwright install --with-deps webkit
+      - run: npx playwright install --with-deps webkit chromium
       - name: User approval, revocation, original inspection and encrypted sharing
         run: |
           node tests/test-sw2-simple.mjs app-v137.html
@@ -25,6 +25,7 @@ jobs:
           node tests/test-sw2-rest-response.mjs
           node --experimental-vm-modules tests/test-sw2-share.mjs
           node tests/test-sw2-simple-browser.cjs
+          node tests/test-sw2-report-background.cjs
           node tests/test-sw2-offline-management.cjs
           node tests/test-sw2-mobile-share.cjs
       - name: Original private modules prepare successfully; anonymous access denied

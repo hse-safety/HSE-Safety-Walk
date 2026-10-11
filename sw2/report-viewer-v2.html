@@ -62,8 +62,21 @@ $('loginForm').addEventListener('submit',async e=>{
 $('logout').onclick=async()=>{await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logger ud…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Kunne ikke bekræfte logout. Luk denne fane.');}};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
-async function verify(){if(currentFrame){currentFrame.inert=true;currentFrame.style.visibility='hidden';}try{const lease=await approvalApi('status');clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>{if(currentFrame){currentFrame.inert=true;currentFrame.style.visibility='hidden';void verify().catch(revoke);}},Math.max(0,lease.expires_at-lease.server_time));if(currentFrame){currentFrame.inert=false;currentFrame.style.visibility='';}}catch(e){throw e;}}
-onApprovalChange(({approved,message})=>{if(!currentFrame)return;currentFrame.inert=!approved;currentFrame.style.visibility=approved?'':'hidden';if(!approved)$('viewerStatus').textContent=message||'Approval required';});
+async function verify(){
+  // Keep the approved document and its input focus intact during background checks.
+  // The expiry timer still locks it before renewal if its current lease runs out.
+  const epoch=accessEpoch;
+  const lease=await approvalApi('status');
+  if(epoch!==accessEpoch)return;
+  clearTimeout(expiryTimer);
+  expiryTimer=setTimeout(()=>{
+    if(epoch!==accessEpoch||!currentFrame)return;
+    currentFrame.inert=true;currentFrame.style.visibility='hidden';
+    void verify().catch(()=>{if(epoch===accessEpoch)revoke();});
+  },Math.max(0,lease.expires_at-lease.server_time));
+  if(currentFrame){if(currentFrame.inert)currentFrame.inert=false;if(currentFrame.style.visibility)currentFrame.style.visibility='';}
+}
+onApprovalChange(({approved,message})=>{if(!currentFrame)return;if(currentFrame.inert===approved)currentFrame.inert=!approved;const visibility=approved?'':'hidden';if(currentFrame.style.visibility!==visibility)currentFrame.style.visibility=visibility;if(!approved)$('viewerStatus').textContent=message||'Approval required';});
 function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
 $('openReport').onclick=async()=>{
  if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
