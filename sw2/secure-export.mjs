@@ -48,7 +48,16 @@ onApprovalChange(({approved})=>{if(approved&&dirty){clearTimeout(debounce);debou
 function install(){
  document.addEventListener('pointerdown',event=>{const button=window.__SW2_SEND_BUTTON;if(button&&(event.target===button||button.contains(event.target)))interacting=true;},true);
  for(const event of ['pointerup','pointercancel'])document.addEventListener(event,()=>setTimeout(()=>{interacting=false;preparationState(dirty)},0),true);
- observer=new MutationObserver(changes=>{const button=window.__SW2_SEND_BUTTON;if(changes.some(m=>!button||!(m.target===button||button.contains(m.target))))invalidate()});observe();
+ // Edits already emit input/change. Observe only photo and dynamic report content;
+ // unrelated UI updates must not restart encryption indefinitely on iPhone.
+ observer=new MutationObserver(changes=>{
+  if(changes.some(m=>{
+   const el=m.target.nodeType===1?m.target:m.target.parentElement;
+   if(!el?.closest)return false;
+   if(m.type==='attributes')return m.attributeName==='src'&&!!el.closest('#hseDoc .photo-slot');
+   return m.type==='childList'&&!!el.closest('#hseDoc .photo-slot, #hseDoc #observationsList, #hseDoc #manualObservationsList, #hseDoc #bestPracticeList');
+  }))invalidate();
+ });observe();
  for(const event of ['input','change'])document.addEventListener(event,invalidate,true);
  invalidate();
 }
