@@ -1,0 +1,35 @@
+name: Correct Safety Walk cover image
+on:
+  push:
+    paths:
+      - '.github/workflows/correct-cover.yml'
+permissions:
+  contents: write
+jobs:
+  correct-cover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove old version marking from cover
+        run: |
+          pip install pillow opencv-python-headless numpy
+          python - <<'PY'
+          import cv2
+          import numpy as np
+          from PIL import Image
+          p = 'safety-walk-cover.png'
+          a = np.asarray(Image.open(p).convert('RGB')).copy()
+          h,w = a.shape[:2]
+          mask = np.zeros((h,w),np.uint8)
+          x0,x1=int(w*.77),int(w*.98)
+          y0,y1=int(h*.69),int(h*.80)
+          mask[y0:y1,x0:x1]=255
+          b=cv2.inpaint(cv2.cvtColor(a,cv2.COLOR_RGB2BGR),mask,15,cv2.INPAINT_TELEA)
+          Image.fromarray(cv2.cvtColor(b,cv2.COLOR_BGR2RGB)).save(p)
+          PY
+      - name: Publish revised cover
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add safety-walk-cover.png
+          git diff --cached --quiet || (git commit -m 'Remove 1.0 from Safety Walk cover' && git push)
