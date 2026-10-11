@@ -11,6 +11,12 @@ export const onApprovalChange=fn=>{listeners.add(fn);return()=>listeners.delete(
 function emit(approved,message=''){for(const fn of listeners)fn({approved,message})}
 function session(){const raw=localStorage.getItem('sb-'+project+'-auth-token');if(!raw)return null;try{const s=JSON.parse(raw);return s.currentSession||s;}catch{return null}}
 async function state(){const s=session();if(!s?.user?.id)throw Error('Login required');if(!context||context.user!==s.user.id){context={user:s.user.id,store:deviceStore(project,s.user.id),lease:null,anchor:null};}return {...context,session:s};}
+async function licenceFetch(url,options={}){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+ try{return await fetch(url,{...options,signal:controller.signal});}
+ catch(cause){const error=Error('Connection unavailable');error.networkUnavailable=true;throw error;}
+ finally{clearTimeout(timer);}
+}
 async function call(action,fields={}){
  if(navigator.onLine===false)throw Error('Internet connection required');
  const ctx=await state(),device=await ctx.store.device();
@@ -19,7 +25,7 @@ async function call(action,fields={}){
  const {data:{session:current},error:sessionError}=await sw2Client.auth.getSession();
  const jwt=current?.access_token;if(sessionError||current?.user?.id!==ctx.user||!jwt||!sessionMatchesProject(current,SUPABASE_URL))throw Error('Login required');
  const headers={apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+jwt,'Content-Type':'application/json'};
- async function request(body){const r=await fetch(LICENSE_ENDPOINT,{method:'POST',cache:'no-store',headers,body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok){const err=Error(data.error||'Approval unavailable');err.status=r.status;throw err;}return data;}
+ async function request(body){const r=await licenceFetch(LICENSE_ENDPOINT,{method:'POST',cache:'no-store',headers,body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok){const err=Error(data.error||'Approval unavailable');err.status=r.status;throw err;}return data;}
  return request({action,fields:{...fields,module:activeModule()},device_id:device.id,public_key_jwk:device.publicJwk});
 }
 export async function registerDevice(){return {status:'approved'};}
@@ -31,7 +37,7 @@ async function effectiveTime(ctx){const saved=await ctx.store.get('lease'),clock
 async function trustedKey(ctx,online=false){
  if(LICENSE_PUBLIC_KEY)return LICENSE_PUBLIC_KEY;
  if(!online){const key=await ctx.store.unseal('signing-key');if(!key)throw Error('Renew the licence online once');return key;}
- const response=await fetch(LICENSE_ENDPOINT+'?action=public-key',{cache:'no-store'});
+ const response=await licenceFetch(LICENSE_ENDPOINT+'?action=public-key',{cache:'no-store'});
  if(!response.ok)throw Error('Licence verification key unavailable');
  const {public_key:key}=await response.json();
  if(!key||key.d||key.kty!=='EC'||key.crv!=='P-256')throw Error('Invalid licence verification key');
@@ -53,16 +59,25 @@ export async function requireApproval({renew=false}={}){
   const ctx=await state();try{
    // Online checks always reach the server; caching is exclusively for offline operation.
    const data=await call('lease');const dev=await ctx.store.device();
-   const trusted=await trustedKey(ctx,true);
-   await verifyOfflineLease(data.lease,trusted,{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now:data.server_time,module:activeModule()});
    if(ticket!==epoch)throw Error('Approval superseded');
-   await ctx.store.seal('signing-key',trusted);
-   await ctx.store.put('lease',{compact:data.lease,serverTime:data.server_time,wall:Date.now()});
-   context.anchor={serverTime:data.server_time,mono:performance.now()};await ctx.store.put('clock',{wall:Date.now(),trusted:data.server_time});
+   if(data.offline_allowed===false){await ctx.store.remove('lease');}
+   else{
+    const trusted=await trustedKey(ctx,true);
+    await verifyOfflineLease(data.lease,trusted,{userId:ctx.user,deviceId:dev.id,projectRef:project,devicePublicJwk:dev.publicJwk,now:data.server_time,module:activeModule()});
+    if(ticket!==epoch)throw Error('Approval superseded');
+    await ctx.store.seal('signing-key',trusted);
+    await ctx.store.put('lease',{compact:data.lease,serverTime:data.server_time,wall:Date.now()});
+    context.anchor={serverTime:data.server_time,mono:performance.now()};await ctx.store.put('clock',{wall:Date.now(),trusted:data.server_time});
+   }
    const original=window.__HSE_SW_IDENTITY?.access;
    if(activeModule()==='facility'&&original&&(data.modules?.office!==original.office||data.modules?.warehouse!==original.warehouse))throw Error('Facility approval changed. Close and reopen Safety Walk.');
    await flushPending();if(ticket!==epoch)throw Error('Approval superseded');emit(true);return data;
-  }catch(e){if(e.status===401||e.status===403)await ctx.store.purge();else await ctx.store.remove('lease');emit(false,e.message);throw e;}
+  }catch(e){
+   if(e.status===401||e.status===403)await ctx.store.purge();
+   else if(e.networkUnavailable){try{const result=await offlineApproval();if(ticket!==epoch)throw Error('Approval superseded');emit(true);return result;}catch(offlineError){emit(false,offlineError.message);throw offlineError;}}
+   // A temporary server/network failure cannot revoke an already issued lease.
+   emit(false,e.message);throw e;
+  }
  });
 }
 export async function licenceApi(action,fields={}){
@@ -80,7 +95,7 @@ export async function licenceApi(action,fields={}){
  throw Error('Unsupported report operation');
 }
 async function flushPending(){const ctx=await state();for(const [key]of await ctx.store.entries())if(String(key).startsWith('pending:')){const fields=await ctx.store.unseal(key);await call('register',fields);await ctx.store.remove(key);}}
-export async function loadPrivateApp(module='onsite'){selectModule(module);await requireApproval();const ctx=await state(),cache='app:'+module;if(navigator.onLine===false){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
+export async function loadPrivateApp(module='onsite'){selectModule(module);const approval=await requireApproval();const ctx=await state(),cache='app:'+module;if(approval.offline){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
 export async function forgetApproval(){epoch++;if(context)await context.store.purge();emit(false,'Logged out');}
 export async function adminDevices(action,fields={}){await registerDevice();return call(action,fields);}
 export function invalidateApproval(){epoch++;emit(false,'Checking current approval');}

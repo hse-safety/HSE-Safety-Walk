@@ -6,7 +6,7 @@ document.head.append(style);
 function set({approved,message}){root.classList.toggle('sw2-approved',approved);root.classList.toggle('sw2-denied',!approved&&!!message);root.dataset.sw2Approval=approved?'approved':'denied';root.dataset.sw2Message=message||'Approval required';root.style.pointerEvents=approved?'':'none';document.body?.setAttribute('aria-busy',String(!approved));if(document.body)document.body.inert=!approved;}
 onApprovalChange(set);set({approved:false});
 let expiryTimer;
-async function verify(){try{const lease=await requireApproval();clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>{invalidateApproval();void verify()},Math.max(0,lease.expires_at-lease.server_time));}catch(e){set({approved:false,message:e.message})}}
+async function verify(){try{const lease=await requireApproval();clearTimeout(expiryTimer);if(lease.expires_at)expiryTimer=setTimeout(()=>{invalidateApproval();void verify()},Math.max(0,lease.expires_at-lease.server_time));}catch(e){set({approved:false,message:e.message})}}
 window.addEventListener('pagehide',()=>{invalidateApproval();set({approved:false})});
 window.addEventListener('pageshow',()=>void verify());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){invalidateApproval();void verify()}});

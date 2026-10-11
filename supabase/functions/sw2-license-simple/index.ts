@@ -13,6 +13,9 @@ async function rest(path:string,options:RequestInit={}){
 const one=async(path:string)=>(await rest(path))?.[0]||null;
 const db:any={
  profile:(id:string)=>one('profiles?select=active,role&id=eq.'+id),
+ offlineSetting:(id:string)=>one('sw2_offline_settings?select=allow_offline&user_id=eq.'+id),
+ offlineSettings:()=>rest('sw2_offline_settings?select=user_id,allow_offline,updated_at'),
+ setOffline:(id:string,allowed:boolean,admin:string,t:number)=>rest('sw2_offline_settings?on_conflict=user_id',{method:'POST',body:JSON.stringify({user_id:id,allow_offline:allowed,updated_by:admin,updated_at:new Date(t).toISOString()}),headers:{Prefer:'resolution=merge-duplicates,return=minimal'}}),
  access:(id:string)=>one('safety_access?select=allow_onsite,allow_office,allow_warehouse&user_id=eq.'+id),
  device:(id:string)=>one('sw2_devices?select=*&device_id=eq.'+id),
  devices:async()=>{const rows=await rest('sw2_devices?select=device_id,user_id,status,label,created_at,approved_at,last_seen_at&order=created_at.desc');const profiles=await rest('profiles?select=id,email,display_name');const names=new Map(profiles.map((p:any)=>[p.id,p.display_name||p.email]));return rows.map((d:any)=>({...d,user_name:names.get(d.user_id)||'Safety Walk user'}));},
@@ -40,7 +43,7 @@ const handler=createHandler({db,projectRef:new URL(url).hostname.split('.')[0],
 Deno.serve(async req=>{
  if(req.method==='GET'&&new URL(req.url).searchParams.get('action')==='health'){
   let ready=true;try{for(const name of ['onsite-v1.0.html','kvi-premises-v1.0.html']){const r=await fetch(url+'/storage/v1/object/authenticated/safety-modules/'+name,{headers});if(!r.ok)throw Error('Original unavailable');prepareV1Module(await r.text(),name.startsWith('onsite')?'onsite':'facility');}}catch(e){ready=false;console.error('SW2 preparation check:',e.message);}
-  return new Response(JSON.stringify({version:'2.0-simple',ready}),{status:ready?200:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+  return new Response(JSON.stringify({version:'2.0-simple',ready,offline_hours:48,offline_management:true}),{status:ready?200:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
  }
 
  // The only anonymous operation exposes the PUBLIC licence verification key.

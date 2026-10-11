@@ -1272,8 +1272,17 @@ async function refreshUsers(){
     }
   ]));
 
+  let offlineSettings=null;
+  try{
+    const {adminDevices}=await import('./sw2/licensing.mjs');
+    const result=await adminDevices('offline-settings');
+    offlineSettings=new Map(result.settings.map(s=>[s.user_id,s.allow_offline]));
+  }catch(error){console.warn('Offline settings unavailable:',error);}
+
   const users=(data||[]).map(u=>({
     ...u,
+    offlineAvailable:offlineSettings!==null,
+    allowOffline:offlineSettings?.get(u.id)!==false,
     access:u.role==='admin'
       ? {allow_onsite:true,allow_office:true,allow_warehouse:true}
       : (accessMap.get(u.id)||{allow_onsite:true,allow_office:false,allow_warehouse:false})
@@ -1402,6 +1411,36 @@ function renderUsers(users){
     }
 
     info.appendChild(accessBox);
+
+    const offlineBox=document.createElement('div');
+    offlineBox.className='user-access';
+    const offlineLabel=document.createElement('label');
+    offlineLabel.className='access-option';
+    const offlineInput=document.createElement('input');
+    offlineInput.type='checkbox';
+    offlineInput.dataset.offlineUser=u.id;
+    offlineInput.checked=u.offlineAvailable&&u.allowOffline;
+    offlineInput.disabled=!u.offlineAvailable||!u.active;
+    const offlineText=document.createElement('span');
+    offlineText.textContent='Allow offline use · 48 hours';
+    offlineLabel.append(offlineInput,offlineText);
+    const offlineNote=document.createElement('div');
+    offlineNote.className='user-access-note';
+    offlineNote.textContent=u.offlineAvailable
+      ? '48 hours from the last online approval. Changes apply on reconnection; existing offline approval lasts until expiry.'
+      : 'Offline settings unavailable. Reconnect and reload User Management.';
+    offlineBox.append(offlineLabel,offlineNote);
+    offlineInput.addEventListener('change',async()=>{
+      offlineInput.disabled=true;
+      try{
+        const {adminDevices}=await import('./sw2/licensing.mjs');
+        await adminDevices('set-offline',{user_id:u.id,allow_offline:offlineInput.checked});
+        u.allowOffline=offlineInput.checked;
+        status('adminStatus','Offline approval updated · 48 hours.',true);
+      }catch(error){offlineInput.checked=u.allowOffline;status('adminStatus',error.message);}
+      finally{offlineInput.disabled=!u.active;}
+    });
+    info.appendChild(offlineBox);
 
     const acts=document.createElement('div');
     acts.className='actions';
