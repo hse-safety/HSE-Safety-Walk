@@ -10,7 +10,7 @@ const b64urlBytes = part => {
  return Uint8Array.from(raw,c=>c.charCodeAt(0));
 };
 const json = bytes=>JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,projectRef,devicePublicJwk,now=Date.now(),maxHours=24,module='onsite'}={}) {
+export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,projectRef,devicePublicJwk,now=Date.now(),maxHours=48,module='onsite'}={}) {
  if(typeof compact!=='string'||compact.length>6000)throw Error('Invalid offline licence');
  const parts=compact.split('.');
  if(parts.length!==3)throw Error('Invalid offline licence');
@@ -26,7 +26,7 @@ export async function verifyOfflineLease(compact,publicJwk,{userId,deviceId,proj
  if(!Number.isSafeInteger(payload.iat)||!Number.isSafeInteger(payload.exp)||!Number.isSafeInteger(payload.nbf)
     ||payload.exp<=payload.iat||payload.nbf!==payload.iat||!Number.isFinite(maxHours)||maxHours<=0
     ||payload.iat>nowSecs+60||payload.nbf>nowSecs+60||payload.exp<=nowSecs
-    ||payload.exp-payload.iat>Math.min(Math.max(maxHours,0),24)*3600
+    ||payload.exp-payload.iat>Math.min(Math.max(maxHours,0),48)*3600
     ||payload.sub!==userId||payload.device_id!==deviceId||payload.project_ref!==projectRef
     ||payload.aud!=='safety-walk-2'||payload.authorized!==true)
    throw Error('Offline licence expired, mismatched, or not approved');

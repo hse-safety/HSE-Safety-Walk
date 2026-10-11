@@ -27,7 +27,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const offlineId=crypto.randomUUID();await page.evaluate(async id=>{await(await import('/sw2/licensing.mjs')).licenceApi('register',{report_id:id,key_b64:btoa('C'.repeat(32))})},offlineId);assert(!reports.has(offlineId));
  // A copied report/app cache has no usable non-exportable key on another browser origin/store.
 
- const expired=await page.evaluate(async()=>{const original=Date.now;Date.now=()=>original()+25*3600000;try{await(await import('/sw2/licensing.mjs')).requireApproval();return false}catch{return true}finally{Date.now=original}});assert(expired,'Expired offline lease was allowed');
+ const expired=await page.evaluate(async()=>{const original=Date.now;Date.now=()=>original()+49*3600000;try{await(await import('/sw2/licensing.mjs')).requireApproval();return false}catch{return true}finally{Date.now=original}});assert(expired,'Expired offline lease was allowed');
  await context.setOffline(false);await page.waitForTimeout(100);await page.evaluate(async()=>{await(await import('/sw2/licensing.mjs')).requireApproval()});assert(reports.has(offlineId),'Offline report key was not synchronised');
  active=false;await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval()}catch{}});await context.setOffline(true);await page.waitForTimeout(30);
  denied=await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval();return false}catch{return true}});assert(denied,'Revoked user reused cached licence');

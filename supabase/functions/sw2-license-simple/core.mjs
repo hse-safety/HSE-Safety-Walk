@@ -12,8 +12,8 @@ export async function verifyProof(j,message,signature){
  const key=await crypto.subtle.importKey('jwk',publicKey(j),{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
  const sig=bytes(signature||'');return sig.length===64&&await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,sig,utf8.encode(message));
 }
-export async function issueLease(privateJwk,{userId,device,projectRef,now=Date.now(),hours=24,modules}){
- const sec=Math.floor(now/1000);const payload={iss:projectRef,aud:'safety-walk-2',sub:userId,device_id:device.device_id,device_key:await thumbprint(device.public_key_jwk),device_public_key:publicKey(device.public_key_jwk),project_ref:projectRef,authorized:true,modules,iat:sec,nbf:sec,exp:sec+Math.min(24,Math.max(1,hours))*3600};
+export async function issueLease(privateJwk,{userId,device,projectRef,now=Date.now(),hours=48,modules}){
+ const sec=Math.floor(now/1000);const payload={iss:projectRef,aud:'safety-walk-2',sub:userId,device_id:device.device_id,device_key:await thumbprint(device.public_key_jwk),device_public_key:publicKey(device.public_key_jwk),project_ref:projectRef,authorized:true,modules,iat:sec,nbf:sec,exp:sec+Math.min(48,Math.max(1,hours))*3600};
  const header=url64(utf8.encode(JSON.stringify({alg:'ES256',typ:'SW2-OFFLINE-LEASE'}))),body=url64(utf8.encode(JSON.stringify(payload)));
  const key=await crypto.subtle.importKey('jwk',privateJwk,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
  const sig=new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},key,utf8.encode(header+'.'+body)));
@@ -32,6 +32,14 @@ export function createHandler({db,getUser,getSigningKey,getWrapKey,getModule,pro
    if(Number(req.headers.get('content-length')||0)>16000)return reply({error:'Request too large'},413);
    const text=await req.text();if(text.length>16000)return reply({error:'Request too large'},413);
    const body=JSON.parse(text),fields=body.fields||{};
+   if(body.action==='offline-settings'||body.action==='set-offline'){
+    if(profile.role!=='admin')return reply({error:'Administrator approval required'},403);
+    if(body.action==='offline-settings')return reply({settings:await db.offlineSettings(),hours:48});
+    if(typeof fields.user_id!=='string'||!/^[0-9a-f-]{36}$/i.test(fields.user_id)||typeof fields.allow_offline!=='boolean')return reply({error:'Invalid offline setting'},400);
+    if(!await db.profile(fields.user_id))return reply({error:'User not found'},404);
+    await db.setOffline(fields.user_id,fields.allow_offline,user.id,now());
+    return reply({saved:true,allow_offline:fields.allow_offline,hours:48});
+   }
    const access=await db.access(user.id);
    const modules={onsite:profile.role==='admin'||access?.allow_onsite===true,facility:profile.role==='admin'||access?.allow_office===true||access?.allow_warehouse===true,office:profile.role==='admin'||access?.allow_office===true,warehouse:profile.role==='admin'||access?.allow_warehouse===true};
    modules.report=modules.onsite||modules.facility;
@@ -53,8 +61,10 @@ export function createHandler({db,getUser,getSigningKey,getWrapKey,getModule,pro
    const allowed=latest?.role==='admin'||(module==='onsite'?latestAccess?.allow_onsite===true:module==='facility'?latestAccess?.allow_office===true||latestAccess?.allow_warehouse===true:latestAccess?.allow_onsite===true||latestAccess?.allow_office===true||latestAccess?.allow_warehouse===true);
    if(latest?.active!==true||!allowed)return reply({error:'Approval withdrawn'},403);
    if(body.action==='lease'||body.action==='status'){
+    const setting=await db.offlineSetting?.(user.id);
+    if(setting?.allow_offline===false)return reply({approved:true,modules,offline_allowed:false,lease:null,expires_at:null,server_time:now()});
     const signed=await issueLease(await getSigningKey(),{userId:user.id,device:latestDevice,projectRef,now:now(),modules});
-    return reply({approved:true,modules,...signed});
+    return reply({approved:true,modules,offline_allowed:true,offline_hours:48,...signed});
    }
    if(body.action==='module'){
     if(module==='report')return reply({error:'Invalid inspection module'},400);
