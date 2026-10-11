@@ -233,6 +233,7 @@ button{
   font-size:11px;
   color:var(--mut);
 }
+.developer-protection-notice{margin-top:12px;color:#b42318;font-size:13px;line-height:1.45;font-weight:800}
 .module-hidden{display:none !important}
 @media(max-width:560px){
   .ready-module-row{grid-template-columns:1fr}
@@ -1386,6 +1387,15 @@ function renderUsers(users){
           : 'KVI Premises is available when Office and/or Warehouse is selected.');
     accessBox.appendChild(accessNote);
 
+    // Display the developer-account notice only on the designated profile.
+    const isDeveloperAccount=String(u.email||'').trim().toLowerCase()==='torben@meirum.eu';
+    if(isDeveloperAccount){
+      const developerNotice=document.createElement('div');
+      developerNotice.className='developer-protection-notice';
+      developerNotice.textContent='This account belongs to the Safety Walk application developer and cannot be deleted through User Management.';
+      accessBox.appendChild(developerNotice);
+    }
+
     if(u.role!=='admin'&&accessTableAvailable&&u.active){
       Object.values(accessInputs).forEach(input=>{
         input.addEventListener('change',async()=>{
@@ -1491,7 +1501,7 @@ function renderUsers(users){
     };
     acts.appendChild(p);
 
-    if(!isSelf){
+    if(!isSelf&&!isDeveloperAccount){
       const d=document.createElement('button');
       d.className='danger';
       d.textContent='Delete';
