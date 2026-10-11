@@ -35,7 +35,7 @@ jobs:
           curl -fsSL --max-time 30 "$base/sw2/config.mjs?release=${GITHUB_SHA}" | grep -q 'sw2-license-simple'
           curl -fsSL --max-time 30 "$base/sw2/auth.mjs?release=${GITHUB_SHA}" | grep -q './vendor/supabase-client.mjs'
           curl -fsSL --max-time 30 "$base/sw2/vendor/supabase-client.mjs?release=${GITHUB_SHA}" | grep -q 'createClient'
-          curl -fsSL --max-time 30 "$base/offline-sw.js?release=${GITHUB_SHA}" | grep -q 'licensed-simple-v5'
+          curl -fsSL --max-time 30 "$base/offline-sw.js?release=${GITHUB_SHA}" | grep -q 'licensed-simple-v6'
           curl -fsSL --max-time 30 "$base/sw2/report-viewer-v2.html" | grep -q 'Beskyttet rapport'
           curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'
           echo 'PASS: simple release login, local auth dependencies, offline worker, report viewer and original private module preparation are live'
