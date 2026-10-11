@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Safety Walk 2.0 – Beskyttede rapporter</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Safety Walk 2.0 – Protected Reports</title>
 <style>
 :root{font-family:system-ui,sans-serif;color:#173048;background:#f1f5f8}*{box-sizing:border-box}body{margin:0}
 header{background:#09375b;color:white;padding:15px 24px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -14,21 +14,21 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 #viewerHeader{padding:10px 15px;background:#e5f0f4;display:flex;justify-content:space-between;align-items:center}
 #inspectionFrame{width:100%;flex:1;border:0;background:#fff}
 </style></head><body>
-<header><strong>SAFETY WALK 2.0 – Beskyttet rapport</strong><button type="button" id="logout">Log ud</button></header>
+<header><strong>SAFETY WALK 2.0 – Protected Report</strong><button type="button" id="logout">Log Out</button></header>
 <main id="workplace">
-<section class="panel" id="loginScreen"><h1>Kun godkendte brugere</h1><form id="loginForm">
+<section class="panel" id="loginScreen"><h1>Authorised Users Only</h1><form id="loginForm">
 <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
-<label for="password">Adgangskode</label><input id="password" type="password" autocomplete="current-password" required>
-<button class="primary" type="submit">Log ind</button></form></section>
-<section class="panel" id="pickScreen" hidden><h1>Åbn krypteret inspektion</h1>
-<p>Vælg den HTML-rapport, du har modtaget via AirDrop eller e-mail.</p>
+<label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>
+<button class="primary" type="submit">Log In</button></form></section>
+<section class="panel" id="pickScreen" hidden><h1>Open Encrypted Inspection</h1>
+<p>Select the HTML report you received via AirDrop or email.</p>
 <input id="reportFile" type="file" accept=".html,text/html">
-<button id="openReport" class="primary" type="button" disabled>Åbn efter godkendelse</button>
-<p>Godkendte brugere kan bruge tidligere åbnede rapporter offline i højst 24 timer. Rapportens indhold uploades ikke til serveren.</p></section>
+<button id="openReport" class="primary" type="button" disabled>Open Once Approved</button>
+<p>Authorised users can access previously opened reports offline for up to 24 hours. Report contents are not uploaded to the server.</p></section>
 <div id="notice" role="status" aria-live="polite"></div></main>
-<section id="viewerScreen" hidden><div id="viewerHeader"><span id="viewerStatus">Godkendt rapport</span>
-<button type="button" id="closeReport">Luk rapport</button></div>
-<iframe id="inspectionFrame" title="Safety Walk-inspektion" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
+<section id="viewerScreen" hidden><div id="viewerHeader"><span id="viewerStatus">Approved Report</span>
+<button type="button" id="closeReport">Close Report</button></div>
+<iframe id="inspectionFrame" title="Safety Walk Inspection" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
 <script type="module">
 import { sw2Client, approvalApi } from './auth.mjs';
 import {forgetApproval,onApprovalChange,invalidateApproval} from './licensing.mjs';
@@ -49,17 +49,17 @@ async function checkSession(){
     await approvalApi('status');
     if(checkEpoch!==accessEpoch)return;
     show('loginScreen',false);show('pickScreen',true);
-    notice('Godkendt. Vælg en krypteret rapport.');
+    notice('Approved. Select an encrypted report.');
   }catch(error){if(checkEpoch!==accessEpoch)return;show('loginScreen',true);show('pickScreen',false);notice(error.message);}
 }
 $('loginForm').addEventListener('submit',async e=>{
- e.preventDefault();notice('Kontrollerer godkendelse…');
+ e.preventDefault();notice('Checking authorisation…');
  const {error}=await sw2Client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
  $('password').value='';
- if(error){notice('Login mislykkedes.');return;}
+ if(error){notice('Login failed.');return;}
  await checkSession();
 });
-$('logout').onclick=async()=>{await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logger ud…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Kunne ikke bekræfte logout. Luk denne fane.');}};
+$('logout').onclick=async()=>{await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logging out…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Unable to confirm logout. Please close this tab.');}};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
 $('closeReport').onclick=closeReport;
 async function verify(){
@@ -77,12 +77,12 @@ async function verify(){
   if(currentFrame){if(currentFrame.inert)currentFrame.inert=false;if(currentFrame.style.visibility)currentFrame.style.visibility='';}
 }
 onApprovalChange(({approved,message})=>{if(!currentFrame)return;if(currentFrame.inert===approved)currentFrame.inert=!approved;const visibility=approved?'':'hidden';if(currentFrame.style.visibility!==visibility)currentFrame.style.visibility=visibility;if(!approved)$('viewerStatus').textContent=message||'Approval required';});
-function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Godkendelsen kunne ikke bekræftes. Rapporten er låst.');}
+function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Authorisation could not be verified. The report is locked.');}
 $('openReport').onclick=async()=>{
- if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Åbner beskyttet rapport…');
+ if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Opening protected report…');
  try{
-  const file=$('reportFile').files?.[0];if(!file)throw Error('Vælg en krypteret HTML-fil.');
-  if(file.size>140_000_000)throw Error('Filen er for stor.');
+  const file=$('reportFile').files?.[0];if(!file)throw Error('Select an encrypted HTML file.');
+  if(file.size>140_000_000)throw Error('The file is too large.');
   const pkg=readCarrierHtml(await file.text());
   const {key_b64}=await approvalApi('open',{report_id:pkg.id});
   const clear=await decryptHtml(pkg,key_b64);
@@ -90,16 +90,16 @@ $('openReport').onclick=async()=>{
   if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
   await verify();
   if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
-  if(!/^<!doctype html>|<html/i.test(clear.trim()))throw Error('Ugyldigt rapportindhold.');
+  if(!/^<!doctype html>|<html/i.test(clear.trim()))throw Error('Invalid report content.');
   const frame=$('inspectionFrame');currentFrame=frame;frame.inert=false;frame.style.visibility='';
   // Report iframe has an opaque origin. It cannot read viewer auth tokens.
   // This flag is used by the original SEND function to hand a revised report to its trusted parent.
   const framed=clear.replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
   frame.srcdoc=framed;
   $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
-  $('viewerStatus').textContent='Safety Walk – Godkendt';
+  $('viewerStatus').textContent='Safety Walk – Approved';
   timer=setInterval(async()=>{if(!currentFrame)return;const epoch=accessEpoch;try{await verify();if(epoch!==accessEpoch)return;}catch{if(epoch===accessEpoch)revoke();}},15000);
- }catch(e){closeReport();notice(e.message||'Rapporten kunne ikke åbnes.');}
+ }catch(e){closeReport();notice(e.message||'Unable to open the report.');}
  finally{busy=false;$('openReport').disabled=!$('reportFile').files?.length;}
 };
 for(const evt of ['online'])window.addEventListener(evt,async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
@@ -120,10 +120,10 @@ window.addEventListener('message',async event=>{
   if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
   const carrier=buildCarrierHtml(pkg,location.href);
   const object=URL.createObjectURL(new Blob([carrier],{type:'text/html'}));
-  const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk – Krypteret.html';document.body.append(a);a.click();a.remove();
+  const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk – Encrypted.html';document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(object),8000);
-  $('viewerStatus').textContent='Ændret krypteret rapport downloadet';
- }catch(error){$('viewerStatus').textContent='Rapporten blev ikke gemt: '+error.message;}
+  $('viewerStatus').textContent='Updated encrypted report downloaded.';
+ }catch(error){$('viewerStatus').textContent='Unable to save the report: '+error.message;}
  finally{busy=false;}
 });
 if('serviceWorker' in navigator)void navigator.serviceWorker.register('../offline-sw.js',{scope:'../'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});
