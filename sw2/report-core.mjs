@@ -32,7 +32,7 @@ export function buildCarrierHtml(p,viewerUrl){
   const u=new URL(viewerUrl);if(u.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(u.hostname))throw Error('HTTPS viewer required');
   const url=u.href.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   const data=JSON.stringify({type:p.type,id:p.id,iv:p.iv,data:p.data});
-  return '<!doctype html><html lang="da"><meta charset="utf-8"><title>Safety Walk 2.0 – Krypteret rapport</title><main style="font:18px system-ui;max-width:680px;margin:10vh auto"><h1>Safety Walk 2.0</h1><p>Denne rapport er krypteret. Kun godkendte Safety Walk-brugere kan åbne den.</p><a target="_blank" rel="noopener noreferrer" href="'+url+'">Åbn Safety Walk rapportåbner</a><p>Vælg derefter denne HTML-fil.</p></main><script type="application/json" id="sw2-payload">'+data+'</script></html>';
+  return '<!doctype html><html lang="da"><meta charset="utf-8"><title>Safety Walk 2.0 – Encrypted Report</title><main style="font:18px system-ui;max-width:680px;margin:10vh auto"><h1>Safety Walk 2.0</h1><p>This report is encrypted. Only authorised Safety Walk users can open it.</p><a target="_blank" rel="noopener noreferrer" href="'+url+'">Open the Safety Walk Report Viewer</a><p>Then select this HTML file.</p></main><script type="application/json" id="sw2-payload">'+data+'</script></html>';
 }
 export function readCarrierHtml(html){
   if(typeof html!=='string'||html.length>MAX_CHARS)throw Error('Invalid file');
