@@ -5,6 +5,8 @@ export async function openLicensedOnsite(identity,module){
  selectModule(module);
  if(identity)await rememberIdentity(identity);else identity=await offlineIdentity();
  let html=prepareLicensedModule(await loadPrivateApp(module));
+ // Record the module actually opened; reporting must never delay or block the inspection.
+ void Promise.all([import('./auth.mjs'),import('./client-version-telemetry.mjs')]).then(([auth,telemetry])=>telemetry.logClientVersion(auth.sw2Client,'module',module==='onsite'?'On-Site':'KVI Premises')).catch(()=>{});
  const json=JSON.stringify(identity).replace(/</g,'\\u003c');
  const script='<scr'+'ipt>window.__HSE_SW_IDENTITY='+json+';</scr'+'ipt>';
  html=html.replace('</head>',script+'</head>');
