@@ -8,10 +8,33 @@ export function deviceLabel(){
  if(/Mac/i.test(ua))return 'Mac';
  return 'Other';
 }
-export async function logClientVersion(client,event,module=null){
- try{
-  await client.rpc('sw2_record_client_version',{
-   p_event:event,p_version:CLIENT_VERSION,p_device:deviceLabel(),p_module:module
-  });
- }catch(error){console.warn('Version reporting unavailable',error);}
+const QUEUE='sw2-pending-version-events';
+function pending(){
+ try{return JSON.parse(localStorage.getItem(QUEUE)||'[]').slice(-30)}catch{return []}
+}
+let working=Promise.resolve();
+export function logClientVersion(client,event,module=null,userId=null){
+ if(!userId)return;
+ const item={userId,event,module,version:CLIENT_VERSION,device:deviceLabel(),at:new Date().toISOString()};
+ try{localStorage.setItem(QUEUE,JSON.stringify([...pending(),item].slice(-30)))}catch{}
+ void flushClientVersions(client,userId);
+}
+export function flushClientVersions(client,userId){
+ if(!userId||navigator.onLine===false)return Promise.resolve();
+ working=working.catch(()=>{}).then(async()=>{
+  const queue=pending(),remaining=[];
+  for(let i=0;i<queue.length;i++){
+   const item=queue[i];
+   if(item.userId!==userId){remaining.push(item);continue;}
+   try{
+    const {error}=await client.rpc('sw2_record_client_version',{
+     p_event:item.event,p_version:item.version,p_device:item.device,
+     p_module:item.module,p_occurred_at:item.at
+    });
+    if(error)throw error;
+   }catch(error){remaining.push(...queue.slice(i));break;}
+  }
+  try{localStorage.setItem(QUEUE,JSON.stringify(remaining.slice(-30)))}catch{}
+ }).catch(()=>{});
+ return working;
 }
