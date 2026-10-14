@@ -1039,7 +1039,8 @@ $('login').onclick=async()=>{
 
     currentProfile=await loadOwnProfile(true);
     currentAccess=await loadOwnAccess();
-    void import('./sw2/client-version-telemetry.mjs').then(m=>m.logClientVersion(supabase,'login')).catch(()=>{});
+    const loggedUserId=currentProfile.id;
+    void import('./sw2/client-version-telemetry.mjs').then(m=>m.logClientVersion(supabase,'login',null,loggedUserId)).catch(()=>{});
     $('password').value='';
     updateSession();
     show('readyCard');
@@ -1052,6 +1053,8 @@ $('login').onclick=async()=>{
     $('login').disabled=false;
   }
 };
+
+window.addEventListener('online',()=>{if(currentProfile?.id)void import('./sw2/client-version-telemetry.mjs').then(m=>m.flushClientVersions(supabase,currentProfile.id)).catch(()=>{});});
 
 $('logout').onclick=async()=>{
   await supabase.auth.signOut();
