@@ -1039,6 +1039,7 @@ $('login').onclick=async()=>{
 
     currentProfile=await loadOwnProfile(true);
     currentAccess=await loadOwnAccess();
+    void import('./sw2/client-version-telemetry.mjs').then(m=>m.logClientVersion(supabase,'login')).catch(()=>{});
     $('password').value='';
     updateSession();
     show('readyCard');
@@ -1280,7 +1281,15 @@ async function refreshUsers(){
     offlineSettings=new Map(result.settings.map(s=>[s.user_id,s.allow_offline]));
   }catch(error){console.warn('Offline settings unavailable:',error);}
 
+  let clientVersions=new Map();
+  try{
+    const {data:versionRows,error:versionError}=await supabase.from('sw2_client_versions').select('user_id,last_login_version,last_login_device,last_login_seen_at,last_module,last_module_version,last_module_device,last_module_opened_at');
+    if(versionError)throw versionError;
+    clientVersions=new Map((versionRows||[]).map(v=>[v.user_id,v]));
+  }catch(error){console.warn('Client version information unavailable:',error);}
+
   const users=(data||[]).map(u=>({
+    clientVersion:clientVersions.get(u.id)||null,
     ...u,
     offlineAvailable:offlineSettings!==null,
     allowOffline:offlineSettings?.get(u.id)!==false,
@@ -1336,7 +1345,13 @@ function renderUsers(users){
       '<strong>'+esc(u.display_name||u.email)+'</strong>'+
       '<small>'+esc(u.email)+' · '+(u.role==='admin'?'Administrator':'User')+(u.active?'':' · Deactivated')+'</small>'+
       '<small><b>Last login:</b> '+esc(fmt(u.last_login_at))+'</small>'+
-      '<small><b>Login count:</b> '+Number(u.login_count||0)+'</small>';
+      '<small><b>Login count:</b> '+Number(u.login_count||0)+'</small>'+
+      '<small><b>Last Safety Walk version:</b> '+esc(u.clientVersion?.last_login_version||'Not yet recorded')+'</small>'+
+      '<small><b>Login device:</b> '+esc(u.clientVersion?.last_login_device||'Not yet recorded')+'</small>'+
+      '<small><b>Last module:</b> '+esc(u.clientVersion?.last_module||'Not yet recorded')+'</small>'+
+      '<small><b>Module version:</b> '+esc(u.clientVersion?.last_module_version||'Not yet recorded')+'</small>'+
+      '<small><b>Module device:</b> '+esc(u.clientVersion?.last_module_device||'Not yet recorded')+'</small>'+
+      '<small><b>Last module opened:</b> '+esc(u.clientVersion?.last_module_opened_at?fmt(u.clientVersion.last_module_opened_at):'Not yet recorded')+'</small>';
 
     const accessBox=document.createElement('div');
     accessBox.className='user-access';
