@@ -1,0 +1,19 @@
+name: Module version and device tracking
+on:
+  push:
+    paths: [sw2/launch.mjs, sw2/client-version-telemetry.mjs, tests/test-sw2-version-*, .github/workflows/sw2-version-validation.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - run: node --experimental-vm-modules tests/test-sw2-version-telemetry.mjs
+      - run: node tests/test-sw2-version-browser.cjs
