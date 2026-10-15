@@ -104,3 +104,28 @@ window.addEventListener('offline',()=>{invalidateApproval();void requireApproval
 
 export async function rememberIdentity(identity){await requireApproval();const ctx=await state();await ctx.store.seal('identity',identity);}
 export async function offlineIdentity(){await requireApproval();const ctx=await state();const value=await ctx.store.unseal('identity');if(!value)throw Error('Open the app online once before offline use');return value;}
+
+// Finish offline preparation before the login screen reports that the app is ready.
+export async function prepareOfflineAccess(identity){
+ const ticket=epoch,previous=localStorage.getItem('sw2-last-module')||activeModule();
+ const access=identity?.access||{};
+ const modules=[...(access.onsite?['onsite']:[]),...(access.office||access.warehouse?['facility']:[])];
+ if(!modules.length)throw Error('No inspection module approved');
+ const preferred=modules.includes(previous)?previous:modules[0];
+ selectModule(preferred);
+ const approval=await requireApproval();
+ const ctx=await state();
+ if(ticket!==epoch||identity.userId!==ctx.user)throw Error('Approval superseded');
+ await ctx.store.seal('identity',identity);
+ if(approval.offline_allowed===false)return {ready:false,disabled:true};
+ try{
+  for(const module of modules){
+   selectModule(module);
+   const {html}=await call('module');
+   if(ticket!==epoch)throw Error('Approval superseded');
+   if(typeof html!=='string')throw Error('Protected app unavailable');
+   await ctx.store.seal('app:'+module,html);
+  }
+ }finally{selectModule(preferred);}
+ return {ready:true,expires_at:approval.expires_at};
+}

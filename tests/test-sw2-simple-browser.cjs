@@ -5,7 +5,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const signing=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
  const privateJwk=await crypto.subtle.exportKey('jwk',signing.privateKey),publicJwk=publicKey(await crypto.subtle.exportKey('jwk',signing.publicKey));
  const user=crypto.randomUUID(),devices=new Map(),challenges=new Map(),reports=new Map();let active=true,allowOffline=true,licenceNetwork=true;
- const db={profile:async()=>({active,role:'user'}),offlineSetting:async()=>({allow_offline:allowOffline}),access:async()=>({allow_onsite:true}),device:async id=>devices.get(id),devices:async()=>[...devices.values()],challenge:async r=>challenges.set(r.challenge,r),consume:async(c,u,d,t)=>{const r=challenges.get(c);challenges.delete(c);return r&&r.user_id===u&&r.device_id===d&&Date.parse(r.expires_at)>t?r:null},registerDevice:async r=>{devices.set(r.device_id,r);return r},touchDevice:async()=>{},report:async id=>reports.get(id),registerReport:async r=>reports.set(r.report_id,r)};
+ const db={profile:async()=>({active,role:'user'}),offlineSetting:async()=>({allow_offline:allowOffline}),access:async()=>({allow_onsite:true,allow_office:true}),device:async id=>devices.get(id),devices:async()=>[...devices.values()],challenge:async r=>challenges.set(r.challenge,r),consume:async(c,u,d,t)=>{const r=challenges.get(c);challenges.delete(c);return r&&r.user_id===u&&r.device_id===d&&Date.parse(r.expires_at)>t?r:null},registerDevice:async r=>{devices.set(r.device_id,r);return r},touchDevice:async()=>{},report:async id=>reports.get(id),registerReport:async r=>reports.set(r.report_id,r)};
  let networkAvailable=true;const root=path.resolve(__dirname,'..'),server=http.createServer((req,res)=>{if(!networkAvailable){req.socket.destroy();return;}const pathname=new URL(req.url,'http://localhost').pathname;if(pathname==='/'){res.setHeader('Content-Type','text/html');return res.end('<!doctype html><html><body>Licence integration</body></html>')};const file=path.resolve(root,'.'+pathname);if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.writeHead(404);return res.end()};res.setHeader('Content-Type',/\.m?js$/.test(file)?'text/javascript':'text/html');res.end(fs.readFileSync(file))});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const handler=createHandler({db,getUser:async t=>t==='valid'?{id:user}:null,getSigningKey:async()=>privateJwk,getWrapKey:async()=>btoa('A'.repeat(32)),getModule:async()=>'<html data-sw2-app-gate data-sw2-secure-export>Private inspection module</html>',projectRef:'test',origin:base});
@@ -14,6 +14,20 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  await page.route('**/sw2/auth.mjs',route=>route.fulfill({contentType:'text/javascript',body:`export function sessionMatchesProject(){return true};export const sw2Client={auth:{getSession:async()=>({data:{session:JSON.parse(localStorage.getItem('sb-test-auth-token'))}})}};`}));
  await page.route('https://test.supabase.co/**',async route=>{if(!licenceNetwork)return route.abort('internetdisconnected');const req=route.request();if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':base,'Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS'}});const r=await handler(new Request(req.url(),{method:req.method(),headers:req.headers(),body:req.postData()}));await route.fulfill({status:r.status,headers:Object.fromEntries(r.headers),body:await r.text()})});
  await page.goto(base);await page.evaluate(u=>localStorage.setItem('sb-test-auth-token',JSON.stringify({access_token:'valid',user:{id:u}})),user);
+ await page.evaluate(async user=>{
+  const m=await import('/sw2/licensing.mjs');
+  const result=await m.prepareOfflineAccess({userId:user,access:{onsite:true,office:true}});
+  if(!result.ready)throw Error('Login did not finish offline preparation');
+ },user);
+ await context.setOffline(true);
+ const loginOffline=await page.evaluate(async()=>{
+  const m=await import('/sw2/licensing.mjs');
+  return {identity:await m.offlineIdentity(),html:await m.loadPrivateApp(),facility:await m.loadPrivateApp('facility')};
+ });
+ assert.equal(loginOffline.identity.userId,user);
+ assert(loginOffline.facility.includes('Private inspection'),'Facility was not prepared at login');
+ assert(loginOffline.html.includes('Private inspection'),'Login alone did not cache the module');
+ await context.setOffline(false);
  await page.evaluate(async()=>{await(await import('/sw2/licensing.mjs')).requireApproval()});
  assert.equal(devices.size,0,'Simple flow unexpectedly registered a server device');
  let denied;

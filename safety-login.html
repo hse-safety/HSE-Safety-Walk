@@ -1019,6 +1019,20 @@ async function openPrivateModule(file,label,allowed){
  status('readyStatus','Opening '+label+'…',true);
  try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity(),file===ONSITE_APP_FILE?'onsite':'facility');}catch(error){status('readyStatus',error.message);}
 }
+async function prepareLoginOfflineAccess(){
+  const buttons=[$('onsiteAppBtn'),$('kviPremisesBtn')];
+  const disabled=buttons.map(button=>button.disabled);
+  buttons.forEach(button=>button.disabled=true);
+  status('readyStatus','Preparing offline access…',true);
+  try{
+    const {prepareOfflineAccess}=await import('./sw2/licensing.mjs');
+    const result=await prepareOfflineAccess(buildIdentity());
+    status('readyStatus',result.ready?'Offline access ready · 48 hours.':'Offline use is disabled for this account.',result.ready);
+  }catch(error){
+    status('readyStatus','Offline access is not ready. Stay online and reopen Safety Walk. '+error.message);
+  }finally{buttons.forEach((button,index)=>button.disabled=disabled[index]);}
+}
+
 $('login').onclick=async()=>{
   status('loginStatus','');
 
@@ -1044,6 +1058,7 @@ $('login').onclick=async()=>{
     $('password').value='';
     updateSession();
     show('readyCard');
+    await prepareLoginOfflineAccess();
   }catch(err){
     await supabase.auth.signOut();
     currentProfile=null;
@@ -1638,6 +1653,7 @@ async function boot(){
     currentAccess=await loadOwnAccess();
     updateSession();
     show('readyCard');
+    await prepareLoginOfflineAccess();
   }catch{
     await supabase.auth.signOut();
     currentProfile=null;

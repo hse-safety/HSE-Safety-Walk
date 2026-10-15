@@ -1,4 +1,4 @@
-const NAME='safety-walk-2-licensed-simple-v10-module-device-tracking';
+const NAME='safety-walk-2-licensed-simple-v11-login-offline-preparation';
 const ROOT=new URL('./',self.location.href);
 const SHELL=new URL('safety-login.html',ROOT).href;
 const LOCAL=['safety-login.html','index.html','manifest.webmanifest','sw2/auth.mjs','sw2/approval-response.mjs','sw2/config.mjs','sw2/licensing.mjs','sw2/device-store.mjs','sw2/offline-lease.mjs','sw2/app-approval-gate.mjs','sw2/secure-export.mjs','sw2/secure-export-2.0.1.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/launch.mjs','sw2/client-version-telemetry.mjs','sw2/prepare-v1-module.mjs'];
