@@ -4,7 +4,7 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const user='11111111-1111-4111-8111-111111111111';
  const root=path.resolve(__dirname,'..');
  const original=fs.readFileSync(path.join(root,'safety-login.html'),'utf8');
- const marker="if(navigator.onLine!==false)boot();else{";
+ const marker="void boot();";
  const start=original.indexOf(marker),end=original.indexOf('</script>',start);
  assert(start>0&&end>start);
  const html=original.slice(0,start)+`window.renderManagementTest=()=>{currentProfile={id:'admin',role:'admin'};show('adminCard');renderUsers([{id:'${user}',email:'test@example.invalid',display_name:'Offline test',role:'user',active:true,offlineAvailable:true,allowOffline:true,access:{allow_onsite:true}}]);};`+original.slice(end);
