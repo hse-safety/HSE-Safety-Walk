@@ -9,7 +9,9 @@ let expiryTimer;
 async function verify(){try{const lease=await requireApproval();clearTimeout(expiryTimer);if(lease.expires_at)expiryTimer=setTimeout(()=>{invalidateApproval();void verify()},Math.max(0,lease.expires_at-lease.server_time));}catch(e){set({approved:false,message:e.message})}}
 window.addEventListener('pagehide',()=>{invalidateApproval();set({approved:false})});
 window.addEventListener('pageshow',()=>void verify());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){invalidateApproval();void verify()}});
+window.addEventListener('online',()=>void verify());
+window.addEventListener('offline',()=>void verify());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void verify()});
 setInterval(()=>void verify(),30000);
 // Block keyboard edits, print shortcuts and programmatic button events while the lease is unavailable.
 for(const event of ['click','beforeinput','keydown','submit','paste','drop'])document.addEventListener(event,e=>{if(!root.classList.contains('sw2-approved')){e.preventDefault();e.stopImmediatePropagation()}},true);
