@@ -853,8 +853,9 @@ function updateSession(){
 }
 
 async function loadOwnProfile(record=false){
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user)return null;
+  const {data:{user},error:authError}=await supabase.auth.getUser();
+  if(authError)throw authError;
+  if(!user)throw new Error('Login required');
 
   const {data:profile,error}=await supabase
     .from('profiles')
@@ -1033,8 +1034,25 @@ async function prepareLoginOfflineAccess(){
   }finally{buttons.forEach((button,index)=>button.disabled=disabled[index]);}
 }
 
+async function restoreOfflineAccess(){
+  const {offlineIdentity,selectModule}=await import('./sw2/licensing.mjs');
+  const previous=localStorage.getItem('sw2-last-module');
+  selectModule(previous==='facility'?'facility':'onsite');
+  const identity=await offlineIdentity();
+  currentProfile={id:identity.userId,display_name:identity.displayName,email:identity.email,role:identity.role};
+  currentAccess={allow_onsite:identity.access?.onsite===true,allow_office:identity.access?.office===true,allow_warehouse:identity.access?.warehouse===true};
+  updateSession();
+  $('adminBtn').style.display='none';
+  show('readyCard');
+  status('readyStatus','Offline access ready. Connect to the internet to renew approval.',true);
+}
+
 $('login').onclick=async()=>{
   status('loginStatus','');
+  if(navigator.onLine===false){
+    try{await restoreOfflineAccess();}catch(error){status('loginStatus',error.message);}
+    return;
+  }
 
   const email=$('email').value.trim();
   const password=$('password').value;
@@ -1641,30 +1659,32 @@ $('createUser').onclick=async()=>{
 };
 
 async function boot(){
-  const {data:{session}}=await supabase.auth.getSession();
-
-  if(!session){
-    show('loginCard');
-    return;
-  }
-
   try{
+    if(navigator.onLine===false){await restoreOfflineAccess();return;}
+    const {data:{session},error}=await supabase.auth.getSession();
+    if(error)throw error;
+    if(!session){show('loginCard');return;}
     currentProfile=await loadOwnProfile(false);
     currentAccess=await loadOwnAccess();
     updateSession();
     show('readyCard');
     await prepareLoginOfflineAccess();
-  }catch{
-    await supabase.auth.signOut();
+  }catch(error){
+    // A connection failure must not sign out or erase a valid offline lease.
+    const networkFailure=navigator.onLine===false||error.status===0||error.name==='AuthRetryableFetchError'||/fetch|network|connection/i.test(error.message||'');
+    if(networkFailure){
+      try{await restoreOfflineAccess();return;}catch(offlineError){error=offlineError;}
+    }
     currentProfile=null;
-    currentAccess={allow_onsite:true,allow_office:false,allow_warehouse:false};
+    currentAccess={allow_onsite:false,allow_office:false,allow_warehouse:false};
     updateSession();
     show('loginCard');
+    status('loginStatus',error.message||'Unable to restore access. Reconnect and sign in.');
   }
 }
 
 if('serviceWorker' in navigator)void navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});
-if(navigator.onLine!==false)boot();else{try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite();}catch(error){status('loginStatus',error.message);}}
+void boot();
 </script>
 <script type="module">import {attachLogout} from "./sw2/launch.mjs";attachLogout(document.getElementById("logout"));</script></body>
 </html>
