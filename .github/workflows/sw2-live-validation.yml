@@ -33,15 +33,21 @@ jobs:
           done
           cmp offline-sw.js /tmp/worker.js
           check_asset() {
-            curl -fsSL --max-time 30 "$base/$1?release=${GITHUB_SHA}" -o /tmp/asset
-            grep -Fq "$2" /tmp/asset
+            echo "Checking $1"
+            grep -Fq "$2" "$1" || { echo "Outdated verification marker for $1"; return 1; }
+            for attempt in $(seq 1 12); do
+              if curl -fsSL --max-time 15 "$base/$1?release=${GITHUB_SHA}&attempt=$attempt" -o /tmp/asset && cmp -s "$1" /tmp/asset; then return 0; fi
+              sleep 5
+            done
+            echo "Published file does not match this release: $1"
+            return 1
           }
           check_asset safety-login.html 'data-sw2-release="2.0-simple"'
           check_asset sw2/config.mjs 'sw2-license-simple'
           check_asset sw2/auth.mjs './client.mjs'
           check_asset sw2/client.mjs './vendor/supabase-client.mjs'
           check_asset sw2/vendor/supabase-client.mjs 'createClient'
-          check_asset sw2/report-viewer-v2.html 'Beskyttet rapport'
+          check_asset sw2/report-viewer-v2.html 'Safety Walk 2.0 – Protected Reports'
           curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' -o /tmp/health.json
           grep -Fq '"ready":true' /tmp/health.json
           echo 'PASS: current release worker, login, auth dependencies, report viewer and module service are live'
