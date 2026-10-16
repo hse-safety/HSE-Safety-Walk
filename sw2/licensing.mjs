@@ -95,7 +95,7 @@ export async function licenceApi(action,fields={}){
  throw Error('Unsupported report operation');
 }
 async function flushPending(){const ctx=await state();for(const [key]of await ctx.store.entries())if(String(key).startsWith('pending:')){const fields=await ctx.store.unseal(key);await call('register',fields);await ctx.store.remove(key);}}
-export async function loadPrivateApp(module='onsite'){selectModule(module);const approval=await requireApproval();const ctx=await state(),cache='app:'+module;if(approval.offline){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
+export async function loadPrivateApp(module='onsite',identity=null){selectModule(module);const approval=await requireApproval();const ctx=await state(),cache='app:'+module;if(identity){if(identity.userId!==ctx.user)throw Error('Identity mismatch');await ctx.store.seal('identity',identity);}if(approval.offline){const html=await ctx.store.unseal(cache);if(!html)throw Error('Open this module online once before offline use');return html;}const {html}=await call('module');if(typeof html!=='string')throw Error('Protected app unavailable');await ctx.store.seal(cache,html);return html;}
 export async function forgetApproval(){epoch++;if(context)await context.store.purge();emit(false,'Logged out');}
 export async function adminDevices(action,fields={}){await registerDevice();return call(action,fields);}
 export function invalidateApproval(){epoch++;emit(false,'Checking current approval');}

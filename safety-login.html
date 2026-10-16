@@ -1014,23 +1014,36 @@ async function openLegacyPrivateModule(fileName,label,allowed){
   }
 }
 
+let offlinePreparation=Promise.resolve();
+let moduleOpening=false;
 async function openPrivateModule(file,label,allowed){
+ if(moduleOpening)return;
  if(!allowed()){status('readyStatus',label+' approval required.');return;}
+ moduleOpening=true;
+ const buttons=[$('onsiteAppBtn'),$('kviPremisesBtn')];
+ buttons.forEach(button=>button.disabled=true);
  status('readyStatus','Opening '+label+'…',true);
- try{const {openLicensedOnsite}=await import('./sw2/launch.mjs');await openLicensedOnsite(buildIdentity(),file===ONSITE_APP_FILE?'onsite':'facility');}catch(error){status('readyStatus',error.message);}
+ try{
+  // Keep the first choice while preparation finishes; do not discard the tap.
+  await offlinePreparation;
+  if(!allowed())throw Error(label+' approval required.');
+  const {openLicensedOnsite}=await import('./sw2/launch.mjs');
+  await openLicensedOnsite(buildIdentity(),file===ONSITE_APP_FILE?'onsite':'facility');
+ }catch(error){status('readyStatus',error.message);}
+ finally{moduleOpening=false;buttons.forEach(button=>button.disabled=false);}
 }
-async function prepareLoginOfflineAccess(){
-  const buttons=[$('onsiteAppBtn'),$('kviPremisesBtn')];
-  const disabled=buttons.map(button=>button.disabled);
-  buttons.forEach(button=>button.disabled=true);
+function prepareLoginOfflineAccess(){
+ offlinePreparation=(async()=>{
   status('readyStatus','Preparing offline access…',true);
   try{
     const {prepareOfflineAccess}=await import('./sw2/licensing.mjs');
     const result=await prepareOfflineAccess(buildIdentity());
-    status('readyStatus',result.ready?'Offline access ready · 48 hours.':'Offline use is disabled for this account.',result.ready);
+    if(!moduleOpening)status('readyStatus',result.ready?'Offline access ready · 48 hours.':'Offline use is disabled for this account.',result.ready);
   }catch(error){
-    status('readyStatus','Offline access is not ready. Stay online and reopen Safety Walk. '+error.message);
-  }finally{buttons.forEach((button,index)=>button.disabled=disabled[index]);}
+    if(!moduleOpening)status('readyStatus','Offline access is not ready. Stay online and reopen Safety Walk. '+error.message);
+  }
+ })();
+ return offlinePreparation;
 }
 
 async function restoreOfflineAccess(){
