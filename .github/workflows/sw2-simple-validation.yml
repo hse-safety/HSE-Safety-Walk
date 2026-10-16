@@ -3,6 +3,8 @@ on:
   push:
     branches: [sw2-simple-release, main]
     paths: [sw2/**, supabase/functions/sw2-license-simple/**, tests/test-sw2-*, safety-login.html, offline-sw.js, .github/workflows/sw2-simple-validation.yml]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +24,9 @@ jobs:
           node tests/test-sw2-simple.mjs app-v137.html
           node tests/test-sw2-offline-lease.mjs
           node tests/test-sw2-report-core.mjs
+          node tests/test-sw2-login-restore.cjs
+          node tests/test-sw2-session-project.mjs
+          node tests/test-sw2-offline-worker.cjs
           node tests/test-sw2-rest-response.mjs
           node --experimental-vm-modules tests/test-sw2-share.mjs
           node tests/test-sw2-simple-browser.cjs

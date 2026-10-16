@@ -1,4 +1,4 @@
-const {webkit}=require('playwright');
+const webkit=require('playwright')[process.env.SW2_TEST_BROWSER||'webkit'];
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 (async()=>{
  const {createHandler,publicKey,bytes}=await import('../supabase/functions/sw2-license-simple/core.mjs');
@@ -29,5 +29,5 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  const pkg=readCarrierHtml(shared.content),row=reports.get(pkg.id);assert(row,'Encrypted report key was not registered');const wrap=await crypto.subtle.importKey('raw',bytes(btoa('A'.repeat(32))),'AES-GCM',false,['decrypt']);const key=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(row.nonce_b64),additionalData:new TextEncoder().encode(pkg.id)},wrap,bytes(row.wrapped_key_b64)));assert((await decryptHtml(pkg,Buffer.from(key).toString('base64'))).includes(note));assert.equal(errors.length,0,errors.join('\n'));
  active=false;await page.evaluate(async()=>{try{await(await import('/sw2/licensing.mjs')).requireApproval()}catch{}});assert(await page.evaluate(()=>document.body.inert&&!document.documentElement.classList.contains('sw2-approved')));active=true;
  const desktop=await browser.newContext();await setup(desktop);const mac=await desktop.newPage();await mac.goto(base+'/inspection.html');await mac.waitForFunction(()=>document.documentElement.classList.contains('sw2-approved'));assert.equal(await mac.locator('#outputActionBtn').textContent(),'PDF - Long');
- console.log('PASS: real V1 inspection in mobile WebKit retains notes, shares encrypted HTML in the live tap, locks revoked users, and retains desktop PDF output.');await browser.close();server.close();
+ console.log('PASS: real V1 inspection in mobile browser retains notes, shares encrypted HTML in the live tap, locks revoked users, and retains desktop PDF output.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

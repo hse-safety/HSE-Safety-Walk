@@ -765,7 +765,7 @@ hr{border:0;border-top:1px solid var(--line);margin:28px 0}
 </div>
 
 <script type="module">
-import { createClient } from './sw2/vendor/supabase-client.mjs';
+import {sw2Client as supabase} from './sw2/client.mjs';
 
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
@@ -778,7 +778,6 @@ const KVI_APP_FILE='kvi-premises-v1.0.html';
 const FREE_DATABASE_LIMIT_BYTES=500*1024*1024; // 500 MB
 const FREE_FILE_STORAGE_LIMIT_BYTES=1024*1024*1024; // 1 GB
 
-const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=id=>document.getElementById(id);
 let currentProfile=null;
 let currentAccess={allow_onsite:true,allow_office:false,allow_warehouse:false};

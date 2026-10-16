@@ -18,7 +18,7 @@ jobs:
       - name: Verify simple release code
         run: |
           grep -q 'data-sw2-release="2.0-simple"' safety-login.html
-          grep -q 'sw2/vendor/supabase-client.mjs' safety-login.html
+          grep -q 'sw2/client.mjs' safety-login.html
           grep -q 'sw2-license-simple' sw2/config.mjs
           for f in sw2/*.mjs sw2/vendor/*.mjs; do node --check "$f"; done
           node --check offline-sw.js
@@ -26,16 +26,22 @@ jobs:
         run: |
           set -eu
           base='https://hse-safety.github.io/HSE-Safety-Walk'
+          # Wait for Pages to publish this worker, rather than checking an obsolete version.
           for n in $(seq 1 30); do
-            curl -fsSL --max-time 15 "$base/safety-login.html?release=${GITHUB_SHA}" -o /tmp/login.html || true
-            if grep -q 'data-sw2-release="2.0-simple"' /tmp/login.html 2>/dev/null; then break; fi
+            if curl -fsSL --max-time 15 "$base/offline-sw.js?release=${GITHUB_SHA}" -o /tmp/worker.js && cmp -s offline-sw.js /tmp/worker.js; then break; fi
             sleep 5
           done
-          grep -q 'data-sw2-release="2.0-simple"' /tmp/login.html
-          curl -fsSL --max-time 30 "$base/sw2/config.mjs?release=${GITHUB_SHA}" | grep -q 'sw2-license-simple'
-          curl -fsSL --max-time 30 "$base/sw2/auth.mjs?release=${GITHUB_SHA}" | grep -q './vendor/supabase-client.mjs'
-          curl -fsSL --max-time 30 "$base/sw2/vendor/supabase-client.mjs?release=${GITHUB_SHA}" | grep -q 'createClient'
-          curl -fsSL --max-time 30 "$base/offline-sw.js?release=${GITHUB_SHA}" | grep -q 'licensed-simple-v7-offline48'
-          curl -fsSL --max-time 30 "$base/sw2/report-viewer-v2.html" | grep -q 'Beskyttet rapport'
-          curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'
-          echo 'PASS: simple release login, local auth dependencies, offline worker, report viewer and original private module preparation are live'
+          cmp offline-sw.js /tmp/worker.js
+          check_asset() {
+            curl -fsSL --max-time 30 "$base/$1?release=${GITHUB_SHA}" -o /tmp/asset
+            grep -Fq "$2" /tmp/asset
+          }
+          check_asset safety-login.html 'data-sw2-release="2.0-simple"'
+          check_asset sw2/config.mjs 'sw2-license-simple'
+          check_asset sw2/auth.mjs './client.mjs'
+          check_asset sw2/client.mjs './vendor/supabase-client.mjs'
+          check_asset sw2/vendor/supabase-client.mjs 'createClient'
+          check_asset sw2/report-viewer-v2.html 'Beskyttet rapport'
+          curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' -o /tmp/health.json
+          grep -Fq '"ready":true' /tmp/health.json
+          echo 'PASS: current release worker, login, auth dependencies, report viewer and module service are live'
