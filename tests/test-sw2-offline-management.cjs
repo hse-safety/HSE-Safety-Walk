@@ -1,4 +1,4 @@
-const {webkit}=require('playwright');
+const webkit=require('playwright')[process.env.SW2_TEST_BROWSER||'webkit'];
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 (async()=>{
  const user='11111111-1111-4111-8111-111111111111';

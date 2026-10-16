@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           for f in tests/test-sw2-*.mjs; do
             echo "Running $f"
-            node "$f"
+            node --experimental-vm-modules "$f"
           done
       - name: Ensure 2.0 staging uses same Supabase project as active login
         shell: bash
@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           grep -q 'hvgljbyethfwxajnrvvi' sw2/config.mjs
           ! grep -q 'lsczcfpwvhtnbqckjlhv' sw2/config.mjs
-          grep -q 'hvgljbyethfwxajnrvvi' sw2/config.production.mjs
+          node tests/test-sw2-session-project.mjs
           test ! -e onsite-v2.0.html
           ! grep -R -l 'raw.githubusercontent.com/hse-safety/HSE-Safety-Walk/safety-walk-2-secure-html-staging/onsite-v2.0.html' sw2-preview/ sw2/ || exit 1
           test -f safety-login.html
@@ -58,12 +58,24 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Install pinned Node browser-test dependency
         run: npm ci --ignore-scripts
-      - name: Build complete release shell
-        run: node sw2/build-licensed-release.mjs --out=dist-sw2
-      - name: Verify device-bound offline licence and reconnection
-        run: node tests/test-sw2-licensing-browser.cjs
+      # Test the shipped user-approval flow, not the retired device-approval builder.
+      - name: Verify current offline shell, licence and reconnection
+        env:
+          SW2_TEST_BROWSER: chromium
+        run: |
+          node tests/test-sw2-offline-worker.cjs
+          node tests/test-sw2-login-restore.cjs
+          node tests/test-sw2-simple-browser.cjs
+          node tests/test-sw2-version-browser.cjs
       - name: Open and revoke encrypted report in browser
         run: python tests/test-sw2-browser.py
 
-      - name: Validate live GitHub Pages preview and anonymous access denial
-        run: python tests/test-sw2-preview-online.py
+      - name: Verify current service denies anonymous module and report access
+        run: |
+          set -euo pipefail
+          endpoint='https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple'
+          for action in module open; do
+            code=$(curl -sS --max-time 30 -o /tmp/denied.json -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"action\":\"$action\"}" "$endpoint")
+            test "$code" = 401
+            ! grep -q 'key_b64' /tmp/denied.json
+          done

@@ -1,8 +1,7 @@
 import { licenceApi } from './licensing.mjs';
 import { validateApprovalResponse } from './approval-response.mjs';
-import { createClient } from './vendor/supabase-client.mjs';
+export {sw2Client} from './client.mjs';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, REPORT_KEY_ENDPOINT } from './config.mjs';
-export const sw2Client=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 // Reject a session belonging to a different Supabase project, even if a
 // cached session exists. This catches accidental TEST/PROD configuration mixing.
 export function sessionMatchesProject(session, baseUrl) {

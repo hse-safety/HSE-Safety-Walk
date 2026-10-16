@@ -1,4 +1,4 @@
-const {webkit}=require('playwright');
+const webkit=require('playwright')[process.env.SW2_TEST_BROWSER||'webkit'];
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 (async()=>{
  const root=path.resolve(__dirname,'..');
