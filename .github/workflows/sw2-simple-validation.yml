@@ -25,6 +25,7 @@ jobs:
           node tests/test-sw2-offline-lease.mjs
           node tests/test-sw2-report-core.mjs
           node tests/test-sw2-login-restore.cjs
+          node --experimental-vm-modules tests/test-sw2-single-tap.cjs
           node tests/test-sw2-session-project.mjs
           node tests/test-sw2-offline-worker.cjs
           node tests/test-sw2-rest-response.mjs
