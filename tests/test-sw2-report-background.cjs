@@ -31,20 +31,12 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  await page.locator('#reportFile').setInputFiles({name:'report.html',mimeType:'text/html',buffer:Buffer.from(carrier)});await page.locator('#openReport').click();
  const frame=page.frameLocator('#inspectionFrame'),notes=frame.locator('#notes');await notes.fill('Work in progress');await notes.evaluate(el=>{el.focus();el.setSelectionRange(3,8);window.scrollTo(0,200);window.sentinel={};});
  await page.evaluate(()=>{window.mutations=[];new MutationObserver(ms=>mutations.push(...ms.map(m=>m.attributeName))).observe(document.querySelector('#inspectionFrame'),{attributes:true});});
- for(let n=0;n<3;n++){
-  await page.evaluate(()=>{fake.hold=true;window.check=reportIntervals[0]();});await page.waitForFunction(()=>fake.pending);
-  assert.equal(await page.locator('#inspectionFrame').evaluate(el=>el.inert||getComputedStyle(el).visibility==='hidden'),false,'Background check interrupted report');
-  assert.deepEqual(await notes.evaluate(el=>[el===document.activeElement,el.value,el.selectionStart,el.selectionEnd,window.scrollY,!!window.sentinel]),[true,'Work in progress',3,8,200,true]);
-  await page.evaluate(async()=>{fake.hold=false;fake.pending();fake.pending=null;await window.check;});
- }
- assert.deepEqual(await page.evaluate(()=>mutations),[],'Successful checks mutated the report frame');
- // Expiry must lock immediately while renewal is pending, then restore on approval.
- await page.evaluate(()=>{fake.hold=true;reportTimeouts.at(-1)();});await page.waitForFunction(()=>fake.pending);
- assert.equal(await page.locator('#inspectionFrame').evaluate(el=>el.inert&&el.style.visibility==='hidden'),true);
- await page.evaluate(()=>{fake.hold=false;fake.pending();fake.pending=null});await page.waitForFunction(()=>!document.querySelector('#inspectionFrame').inert);
- assert.equal(await notes.inputValue(),'Work in progress');
- // A revoked user still loses the decrypted document at the next background check.
- await page.evaluate(async()=>{fake.approved=false;await reportIntervals[0]();});await page.locator('#viewerScreen').waitFor({state:'hidden'});
+ assert.equal(await page.evaluate(()=>reportIntervals.length),0,'Report still renews a timed licence while editing');
+ await page.evaluate(()=>{fake.approved=false;window.dispatchEvent(new Event('online'));window.dispatchEvent(new Event('offline'));document.dispatchEvent(new Event('visibilitychange'));});
+ assert.equal(await page.locator('#inspectionFrame').evaluate(el=>el.inert||getComputedStyle(el).visibility==='hidden'),false,'Connection change interrupted report');
+ assert.deepEqual(await notes.evaluate(el=>[el===document.activeElement,el.value,el.selectionStart,el.selectionEnd,window.scrollY,!!window.sentinel]),[true,'Work in progress',3,8,200,true]);
+ assert.deepEqual(await page.evaluate(()=>mutations),[],'Connection changes mutated the report frame');
+ await page.locator('#closeReport').click();await page.locator('#viewerScreen').waitFor({state:'hidden'});
  assert.equal(await page.locator('#inspectionFrame').getAttribute('srcdoc'),null);assert.deepEqual(errors,[]);
- await browser.close();console.log('PASS: background checks preserve focus, selection, edits, scroll and document; expiry and revocation still lock access.');
+ await browser.close();console.log('PASS: report editing preserves focus, text, selection and photos without recurring licence checks; Close Report still works.');
 })().catch(e=>{console.error(e);process.exit(1)});

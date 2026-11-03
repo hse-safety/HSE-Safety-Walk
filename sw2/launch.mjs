@@ -1,6 +1,6 @@
-import {loadPrivateApp,forgetApproval,offlineIdentity,selectModule} from './licensing.mjs';
+import {loadPrivateApp,forgetApproval,offlineIdentity,selectModule} from './app-session.mjs';
 import {prepareLicensedModule} from './prepare-licensed-module.mjs';
-import {sw2Client} from './auth.mjs';
+import {sw2Client} from './client.mjs';
 import {logClientVersion,flushClientVersions} from './client-version-telemetry.mjs';
 export async function openLicensedOnsite(identity,module){
  if(!module){const previous=localStorage.getItem('sw2-last-module');module=['onsite','facility'].includes(previous)?previous:'onsite';}
@@ -8,7 +8,8 @@ export async function openLicensedOnsite(identity,module){
  if(!identity)identity=await offlineIdentity();
  let html=prepareLicensedModule(await loadPrivateApp(module,identity));
  const json=JSON.stringify(identity).replace(/</g,'\\u003c');
- const script='<scr'+'ipt>window.__HSE_SW_IDENTITY='+json+';</scr'+'ipt>';
+ const draftSetup=module==='facility'?"if(!document.documentElement.dataset.auditStorageKey)document.documentElement.dataset.auditStorageKey='facility-current';":'';
+ const script='<scr'+'ipt>window.__HSE_SW_IDENTITY='+json+';'+draftSetup+'</scr'+'ipt>';
  html=html.replace('</head>',script+'</head>');
  document.documentElement.classList.remove('login-locked');document.open();document.write(html);document.close();
  // document.open cancels pending imports/requests and removes window listeners.

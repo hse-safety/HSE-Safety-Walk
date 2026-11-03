@@ -32,8 +32,9 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 <script type="module">
 import { sw2Client, approvalApi } from './auth.mjs';
 import {forgetApproval,onApprovalChange,invalidateApproval,reportDraftStore} from './licensing.mjs';
-import { readCarrierHtml, decryptHtml, encryptHtml, buildCarrierHtml } from './report-core.mjs';
-import {repairDesktopAutosave,installFrameDraftBridge} from './desktop-autosave.mjs';
+import { readCarrierHtml, decryptHtml } from './report-core.mjs';
+import {installFrameDraftBridge} from './desktop-autosave.mjs';
+import {preparePlainInspection} from './plain-inspection.mjs';
 const $=id=>document.getElementById(id);
 let draftStore=null;
 let currentFrame=null, timer=null, expiryTimer=null, busy=false, accessEpoch=0;
@@ -92,7 +93,7 @@ async function verify(){
   },Math.max(0,lease.expires_at-lease.server_time));
   if(currentFrame){if(currentFrame.inert)currentFrame.inert=false;if(currentFrame.style.visibility)currentFrame.style.visibility='';}
 }
-onApprovalChange(({approved,message})=>{if(!currentFrame)return;if(currentFrame.inert===approved)currentFrame.inert=!approved;const visibility=approved?'':'hidden';if(currentFrame.style.visibility!==visibility)currentFrame.style.visibility=visibility;if(!approved)$('viewerStatus').textContent=message||'Approval required';});
+
 function revoke(){closeReport();$('reportFile').value='';$('openReport').disabled=true;notice('Authorisation could not be verified. The report is locked.');}
 $('openReport').onclick=async()=>{
  if(busy)return;busy=true;const requestEpoch=accessEpoch;$('openReport').disabled=true;notice('Opening protected report…');
@@ -112,17 +113,14 @@ $('openReport').onclick=async()=>{
   // This flag is used by the original SEND function to hand a revised report to its trusted parent.
   draftStore=await reportDraftStore(pkg.id);
   if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
-  const framed=installFrameDraftBridge(repairDesktopAutosave(clear)).replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
+  const framed=installFrameDraftBridge(preparePlainInspection(clear)).replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
   frame.srcdoc=framed;
   $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
   $('viewerStatus').textContent='Safety Walk – Approved';
-  timer=setInterval(async()=>{if(!currentFrame)return;const epoch=accessEpoch;try{await verify();if(epoch!==accessEpoch)return;}catch{if(epoch===accessEpoch)revoke();}},15000);
+  clearTimeout(expiryTimer);expiryTimer=null;
  }catch(e){closeReport();notice(e.message||'Unable to open the report.');}
  finally{busy=false;$('openReport').disabled=!$('reportFile').files?.length;}
 };
-for(const evt of ['online'])window.addEventListener(evt,async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
-window.addEventListener('offline',async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
-document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&currentFrame){try{await verify();}catch{revoke();}}});
 window.addEventListener('message',async event=>{
  if(event.source!==currentFrame?.contentWindow||event.data?.type!=='sw2-draft-request'||!draftStore)return;
  const {id,action,state}=event.data,store=draftStore,target=event.source;
@@ -143,18 +141,12 @@ window.addEventListener('message',async event=>{
  const saveEpoch=accessEpoch;
  busy=true;
  try{
-  await verify();
-  const {package:pkg,key}=await encryptHtml(html);
-  await approvalApi('register',{report_id:pkg.id,key_b64:key});
   if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
-  // Re-check after the network operation; a revoked account must not receive a new export.
-  await verify();
-  if(saveEpoch!==accessEpoch||!currentFrame)throw Error('Report closed before save completed');
-  const carrier=buildCarrierHtml(pkg,location.href);
+  const carrier=preparePlainInspection(html);
   const object=URL.createObjectURL(new Blob([carrier],{type:'text/html'}));
-  const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk – Encrypted.html';document.body.append(a);a.click();a.remove();
+  const a=document.createElement('a');a.href=object;a.download='HSE Safety Walk.html';document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(object),8000);
-  $('viewerStatus').textContent='Updated encrypted report downloaded.';
+  $('viewerStatus').textContent='HTML report with text and photos downloaded.';
  }catch(error){$('viewerStatus').textContent='Unable to save the report: '+error.message;}
  finally{busy=false;}
 });

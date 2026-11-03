@@ -113,5 +113,7 @@ export function installFrameDraftBridge(html) {
    if(event.data.error) request.reject(Error(event.data.error)); else request.resolve(event.data.state);
   });
  };
- return html.replace(/<head([^>]*)>/i, '<head$1><script data-sw2-draft-bridge>('+bootstrap.toString()+')();</scr'+'ipt>');
+ const script='<script data-sw2-draft-bridge>('+bootstrap.toString()+')();</scr'+'ipt>';
+ if(/<head[\s>]/i.test(html))return html.replace(/<head([^>]*)>/i,'<head$1>'+script);
+ return html.replace(/<html([^>]*)>/i,'<html$1><head>'+script+'</head>');
 }
