@@ -1,3 +1,4 @@
+import {repairDesktopAutosave} from './desktop-autosave.mjs';
 // String patches limited to security hooks/versioning; no DOM/layout reserialization.
 export function prepareLicensedModule(source){
  if(typeof source!=='string'||!source.includes('data-sw2-app-gate')||!source.includes('SW2ReportExport.shareSnapshot'))throw Error('Protected 2.0 module required');
@@ -8,5 +9,5 @@ export function prepareLicensedModule(source){
  html=html.replaceAll("clone.querySelectorAll('script[data-sw2-secure-export]')","clone.querySelectorAll('script[data-sw2-secure-export],script[data-sw2-app-gate],style[data-sw2-app-gate]')");
  // Preserve the scoped 2.0 offline worker; legacy cleanup was for the old app only.
  html=html.replace(/<script>\s*\/\* v133 — clear legacy PWA caches\/service workers after this version loads\. \*\/[\s\S]*?<\/script>/,'');
- return html;
+ return repairDesktopAutosave(html);
 }

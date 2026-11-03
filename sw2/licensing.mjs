@@ -129,3 +129,10 @@ export async function prepareOfflineAccess(identity){
  }finally{selectModule(preferred);}
  return {ready:true,expires_at:approval.expires_at};
 }
+
+// The trusted viewer owns draft storage; sandboxed reports only send form state.
+export async function reportDraftStore(reportId) {
+ if(!/^[a-f0-9-]{36}$/i.test(reportId))throw Error('Invalid report draft ID');
+ const ctx=await state(),key='draft:'+reportId;
+ return {read:()=>ctx.store.unseal(key),write:value=>ctx.store.seal(key,value),clear:()=>ctx.store.remove(key)};
+}

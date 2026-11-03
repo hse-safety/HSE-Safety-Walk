@@ -16,6 +16,7 @@ export function deviceStore(project,user){
  }
  async function seal(key,value){const dev=await device(),iv=crypto.getRandomValues(new Uint8Array(12));const clear=new TextEncoder().encode(JSON.stringify(value));const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode(name+':'+key)},dev.aes,clear);await put(key,{iv,cipher});}
  async function unseal(key){const row=await get(key);if(!row)return null;const dev=await device();const clear=await crypto.subtle.decrypt({name:'AES-GCM',iv:row.iv,additionalData:new TextEncoder().encode(name+':'+key)},dev.aes,row.cipher);return JSON.parse(new TextDecoder().decode(clear));}
- async function purge(){for(const [key] of await entries())if(key!=='device'&&!String(key).startsWith('pending:'))await remove(key);}
+ // Working drafts remain encrypted and user-scoped across logout or expired approval.
+ async function purge(){for(const [key] of await entries())if(key!=='device'&&!String(key).startsWith('pending:')&&!String(key).startsWith('draft:'))await remove(key);}
  return {get,put,remove,entries,device,seal,unseal,purge};
 }

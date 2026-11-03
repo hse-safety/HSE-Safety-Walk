@@ -44,6 +44,7 @@ jobs:
           }
           check_asset safety-login.html 'data-sw2-release="2.0-simple"'
           check_asset sw2/config.mjs 'sw2-license-simple'
+          check_asset sw2/desktop-autosave.mjs 'repairDesktopAutosave'
           check_asset sw2/auth.mjs './client.mjs'
           check_asset sw2/client.mjs './vendor/supabase-client.mjs'
           check_asset sw2/vendor/supabase-client.mjs 'createClient'

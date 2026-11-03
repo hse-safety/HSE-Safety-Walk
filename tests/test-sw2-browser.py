@@ -17,7 +17,7 @@ with sync_playwright() as p:
  def route(req):
   part=req.request.url.split('https://safetywalk.example/')[1].split('?')[0]
   if part=='sw2/licensing.mjs':
-   return req.fulfill(status=200,content_type='text/javascript',body="export async function forgetApproval(){};export function onApprovalChange(){};export function invalidateApproval(){};")
+   return req.fulfill(status=200,content_type='text/javascript',body="export async function reportDraftStore(){return {read:async()=>null,write:async()=>{},clear:async()=>{}}};export async function forgetApproval(){};export function onApprovalChange(){};export function invalidateApproval(){};")
   if part=='sw2/auth.mjs':
    return req.fulfill(status=200,content_type='text/javascript',body=fake_auth)
   target=(repo/part).resolve()

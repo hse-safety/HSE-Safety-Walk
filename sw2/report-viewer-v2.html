@@ -31,14 +31,16 @@ button:disabled{opacity:.5;cursor:default}#notice{font-weight:600;margin:14px 0}
 <iframe id="inspectionFrame" title="Safety Walk Inspection" sandbox="allow-scripts allow-forms allow-downloads allow-modals"></iframe></section>
 <script type="module">
 import { sw2Client, approvalApi } from './auth.mjs';
-import {forgetApproval,onApprovalChange,invalidateApproval} from './licensing.mjs';
+import {forgetApproval,onApprovalChange,invalidateApproval,reportDraftStore} from './licensing.mjs';
 import { readCarrierHtml, decryptHtml, encryptHtml, buildCarrierHtml } from './report-core.mjs';
+import {repairDesktopAutosave,installFrameDraftBridge} from './desktop-autosave.mjs';
 const $=id=>document.getElementById(id);
+let draftStore=null;
 let currentFrame=null, timer=null, expiryTimer=null, busy=false, accessEpoch=0;
 const show=(id,yes)=>{$(id).hidden=!yes;};
 const notice=text=>{$('notice').textContent=text||'';};
 function closeReport(){
-  accessEpoch++;
+  accessEpoch++;draftStore=null;
   clearInterval(timer);timer=null;clearTimeout(expiryTimer);expiryTimer=null;
   if(currentFrame){currentFrame.removeAttribute('srcdoc');currentFrame.src='about:blank';currentFrame=null;}
   $('viewerScreen').hidden=true;$('workplace').hidden=false;
@@ -59,9 +61,23 @@ $('loginForm').addEventListener('submit',async e=>{
  if(error){notice('Login failed.');return;}
  await checkSession();
 });
-$('logout').onclick=async()=>{await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logging out…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Unable to confirm logout. Please close this tab.');}};
+$('logout').onclick=async()=>{try{await flushReportDraft();}catch(error){notice(error.message);$('viewerStatus').textContent=error.message;return;}await forgetApproval();closeReport();show('loginScreen',true);show('pickScreen',false);$('reportFile').value='';$('openReport').disabled=true;notice('Logging out…');try{await sw2Client.auth.signOut();await checkSession();}catch{notice('Unable to confirm logout. Please close this tab.');}};
 $('reportFile').onchange=()=>{$('openReport').disabled=!$('reportFile').files?.length;};
-$('closeReport').onclick=closeReport;
+async function flushReportDraft(){
+ if(!currentFrame)return;
+ const target=currentFrame.contentWindow,id=crypto.randomUUID();
+ await new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>finish(Error('Save not confirmed. Keep this report open and save a file.')),15000);
+  function finish(error){clearTimeout(timer);window.removeEventListener('message',reply);error?reject(error):resolve();}
+  function reply(event){if(event.source!==target||event.data?.type!=='sw2-draft-flushed'||event.data.id!==id)return;finish(event.data.error?Error(event.data.error):null);}
+  window.addEventListener('message',reply);target.postMessage({type:'sw2-draft-flush',id},'*');
+ });
+}
+$('closeReport').onclick=async()=>{
+ $('closeReport').disabled=true;$('viewerStatus').textContent='Saving text and photos before closing…';
+ try{await flushReportDraft();closeReport();}catch(error){$('viewerStatus').textContent=error.message;}
+ finally{$('closeReport').disabled=false;}
+};
 async function verify(){
   // Keep the approved document and its input focus intact during background checks.
   // The expiry timer still locks it before renewal if its current lease runs out.
@@ -94,7 +110,9 @@ $('openReport').onclick=async()=>{
   const frame=$('inspectionFrame');currentFrame=frame;frame.inert=false;frame.style.visibility='';
   // Report iframe has an opaque origin. It cannot read viewer auth tokens.
   // This flag is used by the original SEND function to hand a revised report to its trusted parent.
-  const framed=clear.replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
+  draftStore=await reportDraftStore(pkg.id);
+  if(requestEpoch!==accessEpoch)throw Error('Report opening cancelled');
+  const framed=installFrameDraftBridge(repairDesktopAutosave(clear)).replace(/<head([^>]*)>/i, '<head$1><script>window.__SW2_VIEWER_FRAME=true;' + '</scr' + 'ipt>');
   frame.srcdoc=framed;
   $('viewerScreen').hidden=false;$('workplace').hidden=true;notice('');
   $('viewerStatus').textContent='Safety Walk – Approved';
@@ -105,6 +123,20 @@ $('openReport').onclick=async()=>{
 for(const evt of ['online'])window.addEventListener(evt,async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
 window.addEventListener('offline',async()=>{if(currentFrame){try{await verify();}catch{revoke();}}});
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&currentFrame){try{await verify();}catch{revoke();}}});
+window.addEventListener('message',async event=>{
+ if(event.source!==currentFrame?.contentWindow||event.data?.type!=='sw2-draft-request'||!draftStore)return;
+ const {id,action,state}=event.data,store=draftStore,target=event.source;
+ try{
+  let result=null;
+  if(action==='read')result=await store.read();
+  else if(action==='write'){
+   if(!state||typeof state!=='object'||state.version!==1)throw Error('Invalid report draft');
+   await store.write(state);
+  }else if(action==='clear')await store.clear();
+  else throw Error('Invalid draft operation');
+  target.postMessage({type:'sw2-draft-response',id,state:result},'*');
+ }catch(error){target.postMessage({type:'sw2-draft-response',id,error:error.message||'Autosave failed'},'*');}
+});
 window.addEventListener('message',async event=>{
  if(!currentFrame||event.source!==currentFrame.contentWindow||event.data?.type!=='sw2-save-request'||busy)return;
  const html=event.data.html;if(typeof html!=='string'||html.length>140_000_000)return;

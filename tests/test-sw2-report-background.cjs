@@ -11,7 +11,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  });
  await page.route('https://safetywalk.example/**',route=>{
   const part=new URL(route.request().url()).pathname.slice(1);
-  if(part==='sw2/licensing.mjs')return route.fulfill({contentType:'text/javascript',body:'export async function forgetApproval(){};export function onApprovalChange(fn){window.approvalListener=fn;};export function invalidateApproval(){};'});
+  if(part==='sw2/licensing.mjs')return route.fulfill({contentType:'text/javascript',body:'export async function reportDraftStore(){return {read:async()=>null,write:async()=>{},clear:async()=>{}}};export async function forgetApproval(){};export function onApprovalChange(fn){window.approvalListener=fn;};export function invalidateApproval(){};'});
   if(part==='sw2/auth.mjs')return route.fulfill({contentType:'text/javascript',body:`
    window.fake={approved:true,signedIn:false,keys:{},pending:null,hold:false};
    export const sw2Client={auth:{signInWithPassword:async()=>{fake.signedIn=true;return {}},signOut:async()=>{fake.signedIn=false}}};
