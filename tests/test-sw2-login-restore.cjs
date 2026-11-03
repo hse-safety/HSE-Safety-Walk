@@ -12,10 +12,7 @@ async function scenario({online=true,failure=null,offlineError=null,session=true
 }
 (async()=>{
  assert.deepEqual(await scenario({online:false}),['offline']);
- assert((await scenario({failure:Object.assign(Error('Failed to fetch'),{status:0})})).includes('offline'));
- assert(!(await scenario({failure:Object.assign(Error('User not approved'),{status:403})})).includes('offline'));
- assert((await scenario({online:false,offlineError:Error('Offline licence expired')})).includes('Offline licence expired'));
- assert((await scenario()).includes('prepare'));
- assert.deepEqual(await scenario({session:false}),['session','loginCard']);
- console.log('PASS: offline boot bypasses network auth; network failure preserves session; denial and expiry stay blocked; online boot prepares offline access.');
+ assert.deepEqual(await scenario({online:true}),['offline']);
+ assert.deepEqual(await scenario({offlineError:Error('Login required')}),['offline','loginCard','Login required']);
+ console.log('PASS: startup restores the local session without network checks, including when the browser reports online.');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -987,9 +987,8 @@ async function restoreOfflineAccess(){
   currentProfile={id:identity.userId,display_name:identity.displayName,email:identity.email,role:identity.role};
   currentAccess={allow_onsite:identity.access?.onsite===true,allow_office:identity.access?.office===true,allow_warehouse:identity.access?.warehouse===true};
   updateSession();
-  $('adminBtn').style.display='none';
   show('readyCard');
-  status('readyStatus','Offline app ready · text and photos save automatically.',true);
+  status('readyStatus','App ready · text and photos save automatically.',true);
 }
 
 $('login').onclick=async()=>{
@@ -1565,28 +1564,8 @@ $('createUser').onclick=async()=>{
 };
 
 async function boot(){
-  try{
-    if(navigator.onLine===false){await restoreOfflineAccess();return;}
-    const {data:{session},error}=await supabase.auth.getSession();
-    if(error)throw error;
-    if(!session){show('loginCard');return;}
-    currentProfile=await loadOwnProfile(false);
-    currentAccess=await loadOwnAccess();
-    updateSession();
-    show('readyCard');
-    void prepareLoginOfflineAccess();
-  }catch(error){
-    // A connection failure must not sign out or erase a valid offline lease.
-    const networkFailure=navigator.onLine===false||error.status===0||error.name==='AuthRetryableFetchError'||/fetch|network|connection/i.test(error.message||'');
-    if(networkFailure){
-      try{await restoreOfflineAccess();return;}catch(offlineError){error=offlineError;}
-    }
-    currentProfile=null;
-    currentAccess={allow_onsite:false,allow_office:false,allow_warehouse:false};
-    updateSession();
-    show('loginCard');
-    status('loginStatus',error.message||'Unable to restore access. Reconnect and sign in.');
-  }
+ try{await restoreOfflineAccess();}
+ catch(error){show('loginCard');status('loginStatus',error.message||'Login required');}
 }
 
 if('serviceWorker' in navigator)void navigator.serviceWorker.register('./offline-sw.js',{scope:'./'}).catch(()=>{document.documentElement.dataset.sw2OfflineReady='false'});

@@ -9,8 +9,8 @@ async function scenario({online,method='GET',url='https://example.test/app/safet
 }
 (async()=>{
  let r=await scenario({online:false});assert.equal(r.response,r.cached);assert.equal(r.fetches,0,'Offline startup attempted a network request');
- r=await scenario({online:true});assert.equal(r.fetches,1,'Online navigation did not check the network');
+ r=await scenario({online:true});assert.equal(r.fetches,0,'Cached app waited for the network');
  r=await scenario({online:false,url:'https://project.supabase.co/auth/v1/user'});assert.equal(r.response,undefined,'Worker intercepted private auth');
  r=await scenario({online:false,method:'POST'});assert.equal(r.response,undefined);
- console.log('PASS: offline navigation uses cache immediately; online navigation stays fresh; auth and POST requests are never intercepted.');
+ console.log('PASS: offline navigation uses cache immediately; online navigation opens the cached app immediately; auth and POST requests are never intercepted.');
 })().catch(e=>{console.error(e);process.exitCode=1});
