@@ -1,7 +1,8 @@
 // Keep the inspection's existing state format, including embedded photo data URLs.
 // The viewer supplies a storage bridge because sandboxed srcdoc has an opaque origin.
 export function repairDesktopAutosave(source) {
- if(typeof source!=='string'||source.includes('data-sw2-autosave-repair'))return source;
+ if(typeof source!=='string')return source;
+ if(source.includes('data-sw2-autosave-repair'))return source.replace('@media print{#sw2AutosaveStatus{display:none!important}}','#sw2AutosaveStatus{display:none!important}');
  if(!source.includes('function captureAutosaveState()'))return source;
  const start=source.indexOf('    async function saveDraftNow() {');
  const end=source.indexOf('\n    function scheduleAutosave(',start);
@@ -86,7 +87,7 @@ export function repairDesktopAutosave(source) {
  html=html.replace("        clearTimeout(autosaveTimer);\n        autosaveTimer = setTimeout(saveDraftNow, delay);", "        autosaveRevision++;\n        autosavePending = true;\n        autosaveStatus('Unsaved changes — saving text and photos…');\n        clearTimeout(autosaveTimer);\n        autosaveTimer = setTimeout(saveDraftNow, delay);");
  // Print and exported reports must not carry a stale save confirmation.
  html=html.replace('        syncStandaloneSnapshotState(document.documentElement, clone);', "        syncStandaloneSnapshotState(document.documentElement, clone);\n        clone.querySelector('#sw2AutosaveStatus')?.remove();\n        clone.querySelector('[data-sw2-draft-bridge]')?.remove();");
- html=html.replace('</head>', '<style data-sw2-autosave-repair>@media print{#sw2AutosaveStatus{display:none!important}}</style></head>');
+ html=html.replace('</head>', '<style data-sw2-autosave-repair>#sw2AutosaveStatus{display:none!important}</style></head>');
  return html;
 }
 
