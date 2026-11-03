@@ -1,5 +1,5 @@
 <!doctype html>
-<html data-sw2-release="2.0-simple" lang="en">
+<html data-sw2-release="2.0-login-only" lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -770,7 +770,7 @@ import {sw2Client as supabase} from './sw2/client.mjs';
 const SUPABASE_URL="https://hvgljbyethfwxajnrvvi.supabase.co";
 const SUPABASE_KEY="sb_publishable_pMvJE0yUfBC9KhPl43WGrQ_dUCERa3c";
 const MODULE_BUCKET='safety-modules';
-const ONSITE_APP_FILE='onsite-v2.0.html';
+const ONSITE_APP_FILE='onsite-v1.0.html';
 const KVI_APP_FILE='kvi-premises-v1.0.html';
 
 // Free Plan storage limits verified against Supabase documentation on 22 Aug 2026.
@@ -947,73 +947,6 @@ function buildIdentity(){
   };
 }
 
-async function openLegacyPrivateModule(fileName,label,allowed){
-  status('readyStatus','');
-
-  if(!allowed()){
-    status('readyStatus','Access to '+label+' has not been assigned to this account.');
-    return;
-  }
-
-  status('readyStatus','Opening '+label+'…',true);
-
-  const {data,error}=await supabase.storage
-    .from(MODULE_BUCKET)
-    .createSignedUrl(fileName,60);
-
-  if(error){
-    status('readyStatus','Unable to open '+label+': '+error.message);
-    return;
-  }
-
-  try{
-    const r=await fetch(data.signedUrl);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-
-    let html=await r.text();
-    if (fileName === KVI_APP_FILE) {
-      const versionMarker = "const SAFETY_WALK_VERSION = '1.0';";
-      if (!html.includes(versionMarker) && !html.includes("const SAFETY_WALK_VERSION = '2.0';")) throw new Error('Facility version marker missing');
-      html = html.replace(versionMarker, "const SAFETY_WALK_VERSION = '2.0';");
-    }
-    if (fileName === ONSITE_APP_FILE) {
-      const valid = html.includes('data-safety-walk-version="2.0-staging"')
-        && html.includes('data-sw2-app-gate')
-        && html.includes('data-sw2-secure-export')
-        && html.includes('SW2ReportExport.protectSnapshot(clearHtml)');
-      if (!valid) throw new Error('Safety Walk 2.0 security module missing; opening blocked.');
-      const {data:{session},error:sessionError}=await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) throw new Error('Login required');
-      const check=await fetch(SUPABASE_URL+'/functions/v1/sw2-report-key', {
-        method:'POST', cache:'no-store',
-        headers:{'Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
-        body:JSON.stringify({action:'status'})
-      });
-      const approval=await check.json().catch(()=>({}));
-      if (!check.ok || approval.approved !== true) throw new Error('On-Site 2.0 approval denied.');
-      // Mirror the already-proven iPhone preview's On-Site display version fix.
-      // No inspection content, SEND workflow or KVI functionality is changed.
-      html=html.replace("const SAFETY_WALK_VERSION = '1.0';", "const SAFETY_WALK_VERSION = '2.0';");
-    }
-    const identity=buildIdentity();
-    const safeIdentityJson=JSON.stringify(identity).replace(/</g,'\\u003c');
-    const identityScript='<scr'+'ipt>window.__HSE_SW_IDENTITY='+safeIdentityJson+';</scr'+'ipt>';
-
-    if(html.includes('</head>')){
-      html=html.replace('</head>',identityScript+'</head>');
-    }else{
-      html=identityScript+html;
-    }
-
-    document.documentElement.classList.remove('login-locked');
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(err){
-    status('readyStatus','Unable to load '+label+': '+(err.message||err));
-  }
-}
-
 let offlinePreparation=Promise.resolve();
 let moduleOpening=false;
 async function openPrivateModule(file,label,allowed){
@@ -1025,7 +958,7 @@ async function openPrivateModule(file,label,allowed){
  status('readyStatus','Opening '+label+'…',true);
  try{
   // Keep the first choice while preparation finishes; do not discard the tap.
-  await offlinePreparation;
+  // Module launch does not wait for background offline downloads.
   if(!allowed())throw Error(label+' approval required.');
   const {openLicensedOnsite}=await import('./sw2/launch.mjs');
   await openLicensedOnsite(buildIdentity(),file===ONSITE_APP_FILE?'onsite':'facility');
@@ -1034,20 +967,20 @@ async function openPrivateModule(file,label,allowed){
 }
 function prepareLoginOfflineAccess(){
  offlinePreparation=(async()=>{
-  status('readyStatus','Preparing offline access…',true);
+  status('readyStatus','Preparing app for offline use…',true);
   try{
-    const {prepareOfflineAccess}=await import('./sw2/licensing.mjs');
+    const {prepareOfflineAccess}=await import('./sw2/app-session.mjs');
     const result=await prepareOfflineAccess(buildIdentity());
-    if(!moduleOpening)status('readyStatus',result.ready?'Offline access ready · 48 hours.':'Offline use is disabled for this account.',result.ready);
+    if(!moduleOpening&&$('readyStatus'))status('readyStatus',result.ready?'App ready · reports save automatically.':'Offline use is disabled for this account.',result.ready);
   }catch(error){
-    if(!moduleOpening)status('readyStatus','Offline access is not ready. Stay online and reopen Safety Walk. '+error.message);
+    if(!moduleOpening&&$('readyStatus'))status('readyStatus','Offline access is not ready. Stay online and reopen Safety Walk. '+error.message);
   }
  })();
  return offlinePreparation;
 }
 
 async function restoreOfflineAccess(){
-  const {offlineIdentity,selectModule}=await import('./sw2/licensing.mjs');
+  const {offlineIdentity,selectModule}=await import('./sw2/app-session.mjs');
   const previous=localStorage.getItem('sw2-last-module');
   selectModule(previous==='facility'?'facility':'onsite');
   const identity=await offlineIdentity();
@@ -1056,7 +989,7 @@ async function restoreOfflineAccess(){
   updateSession();
   $('adminBtn').style.display='none';
   show('readyCard');
-  status('readyStatus','Offline access ready. Connect to the internet to renew approval.',true);
+  status('readyStatus','Offline app ready · text and photos save automatically.',true);
 }
 
 $('login').onclick=async()=>{
@@ -1088,7 +1021,7 @@ $('login').onclick=async()=>{
     $('password').value='';
     updateSession();
     show('readyCard');
-    await prepareLoginOfflineAccess();
+    void prepareLoginOfflineAccess();
   }catch(err){
     await supabase.auth.signOut();
     currentProfile=null;
@@ -1322,13 +1255,6 @@ async function refreshUsers(){
     }
   ]));
 
-  let offlineSettings=null;
-  try{
-    const {adminDevices}=await import('./sw2/licensing.mjs');
-    const result=await adminDevices('offline-settings');
-    offlineSettings=new Map(result.settings.map(s=>[s.user_id,s.allow_offline]));
-  }catch(error){console.warn('Offline settings unavailable:',error);}
-
   let clientVersions=new Map();
   try{
     const {data:versionRows,error:versionError}=await supabase.from('sw2_client_versions').select('user_id,last_login_version,last_login_device,last_login_seen_at,last_module,last_module_version,last_module_device,last_module_opened_at');
@@ -1339,8 +1265,6 @@ async function refreshUsers(){
   const users=(data||[]).map(u=>({
     clientVersion:clientVersions.get(u.id)||null,
     ...u,
-    offlineAvailable:offlineSettings!==null,
-    allowOffline:offlineSettings?.get(u.id)!==false,
     access:u.role==='admin'
       ? {allow_onsite:true,allow_office:true,allow_warehouse:true}
       : (accessMap.get(u.id)||{allow_onsite:true,allow_office:false,allow_warehouse:false})
@@ -1484,36 +1408,6 @@ function renderUsers(users){
     }
 
     info.appendChild(accessBox);
-
-    const offlineBox=document.createElement('div');
-    offlineBox.className='user-access';
-    const offlineLabel=document.createElement('label');
-    offlineLabel.className='access-option';
-    const offlineInput=document.createElement('input');
-    offlineInput.type='checkbox';
-    offlineInput.dataset.offlineUser=u.id;
-    offlineInput.checked=u.offlineAvailable&&u.allowOffline;
-    offlineInput.disabled=!u.offlineAvailable||!u.active;
-    const offlineText=document.createElement('span');
-    offlineText.textContent='Allow offline use · 48 hours';
-    offlineLabel.append(offlineInput,offlineText);
-    const offlineNote=document.createElement('div');
-    offlineNote.className='user-access-note';
-    offlineNote.textContent=u.offlineAvailable
-      ? '48 hours from the last online approval. Changes apply on reconnection; existing offline approval lasts until expiry.'
-      : 'Offline settings unavailable. Reconnect and reload User Management.';
-    offlineBox.append(offlineLabel,offlineNote);
-    offlineInput.addEventListener('change',async()=>{
-      offlineInput.disabled=true;
-      try{
-        const {adminDevices}=await import('./sw2/licensing.mjs');
-        await adminDevices('set-offline',{user_id:u.id,allow_offline:offlineInput.checked});
-        u.allowOffline=offlineInput.checked;
-        status('adminStatus','Offline approval updated · 48 hours.',true);
-      }catch(error){offlineInput.checked=u.allowOffline;status('adminStatus',error.message);}
-      finally{offlineInput.disabled=!u.active;}
-    });
-    info.appendChild(offlineBox);
 
     const acts=document.createElement('div');
     acts.className='actions';
@@ -1680,7 +1574,7 @@ async function boot(){
     currentAccess=await loadOwnAccess();
     updateSession();
     show('readyCard');
-    await prepareLoginOfflineAccess();
+    void prepareLoginOfflineAccess();
   }catch(error){
     // A connection failure must not sign out or erase a valid offline lease.
     const networkFailure=navigator.onLine===false||error.status===0||error.name==='AuthRetryableFetchError'||/fetch|network|connection/i.test(error.message||'');

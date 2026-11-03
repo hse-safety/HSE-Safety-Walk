@@ -19,7 +19,7 @@ jobs:
           node-version: '22'
       - run: npm ci
       - run: npx playwright install --with-deps webkit chromium
-      - name: User approval, revocation, original inspection and encrypted sharing
+      - name: Login, plain report sharing, desktop autosave and legacy compatibility
         run: |
           node tests/test-sw2-simple.mjs app-v137.html
           node tests/test-sw2-offline-lease.mjs
@@ -32,8 +32,8 @@ jobs:
           node --experimental-vm-modules tests/test-sw2-share.mjs
           node tests/test-sw2-simple-browser.cjs
           node tests/test-sw2-report-background.cjs
-          node tests/test-sw2-offline-management.cjs
-          node tests/test-sw2-mobile-share.cjs
+          node tests/test-sw2-desktop-autosave.cjs
+          node tests/test-sw2-login-plain.cjs
       - name: Original private modules prepare successfully; anonymous access denied
         run: |
           curl -fsSL --max-time 30 'https://hvgljbyethfwxajnrvvi.supabase.co/functions/v1/sw2-license-simple?action=health' | grep -q '"ready":true'

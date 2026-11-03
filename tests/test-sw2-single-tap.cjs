@@ -9,7 +9,7 @@ async function scenario(module,preparing){
  const licensing=new vm.SyntheticModule(['prepareOfflineAccess'],function(){this.setExport('prepareOfflineAccess',()=>prep.promise)},{context});
  const launcher=new vm.SyntheticModule(['openLicensedOnsite'],function(){this.setExport('openLicensedOnsite',async(identity,selected)=>{calls.push(selected);await launch.promise})},{context});
  for(const m of [licensing,launcher]){await m.link(()=>{});await m.evaluate()}
- await new vm.Script(source,{importModuleDynamically:specifier=>specifier.includes('licensing')?licensing:launcher}).runInContext(context);
+ await new vm.Script(source,{importModuleDynamically:specifier=>specifier.includes('app-session')?licensing:launcher}).runInContext(context);
  if(preparing){vm.runInContext('prepareLoginOfflineAccess()',context);assert.equal(buttons.onsiteAppBtn.disabled,false)}
  const invoke=()=>vm.runInContext(`openPrivateModule('${module==='onsite'?'onsite.html':'facility.html'}','Test',()=>true)`,context);
  const first=invoke();await invoke();assert.equal(buttons.onsiteAppBtn.disabled,true);

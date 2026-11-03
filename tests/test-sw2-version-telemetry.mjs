@@ -8,9 +8,9 @@ const telemetry=new vm.SourceTextModule(readFileSync('sw2/client-version-telemet
 let release,block=false;
 const client={rpc:async(name,args)=>{assert(replaced);events.push(args);if(block){block=false;await new Promise(r=>release=r)}return {error:null}}};
 const dependencies={
- './licensing.mjs':{loadPrivateApp:async()=>'<html><head></head><body data-sw2-app-gate>SW2ReportExport.shareSnapshot</body></html>',forgetApproval(){},rememberIdentity:async()=>{},offlineIdentity:async()=>({userId:'test'}),selectModule(){}},
+ './app-session.mjs':{loadPrivateApp:async()=>'<html><head></head><body data-sw2-app-gate>SW2ReportExport.shareSnapshot</body></html>',forgetApproval(){},rememberIdentity:async()=>{},offlineIdentity:async()=>({userId:'test'}),selectModule(){}},
  './prepare-licensed-module.mjs':{prepareLicensedModule:s=>s},
- './auth.mjs':{sw2Client:client}
+ './client.mjs':{sw2Client:client}
 };
 const launcher=new vm.SourceTextModule(readFileSync('sw2/launch.mjs','utf8'),{context});
 await launcher.link(async spec=>{if(spec==='./client-version-telemetry.mjs')return telemetry;const values=dependencies[spec];return new vm.SyntheticModule(Object.keys(values),function(){for(const [k,v]of Object.entries(values))this.setExport(k,v)},{context})});await launcher.evaluate();

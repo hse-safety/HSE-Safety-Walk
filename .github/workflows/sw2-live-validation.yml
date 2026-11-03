@@ -17,7 +17,7 @@ jobs:
           node-version: '22'
       - name: Verify simple release code
         run: |
-          grep -q 'data-sw2-release="2.0-simple"' safety-login.html
+          grep -q 'data-sw2-release="2.0-login-only"' safety-login.html
           grep -q 'sw2/client.mjs' safety-login.html
           grep -q 'sw2-license-simple' sw2/config.mjs
           for f in sw2/*.mjs sw2/vendor/*.mjs; do node --check "$f"; done
@@ -42,8 +42,11 @@ jobs:
             echo "Published file does not match this release: $1"
             return 1
           }
-          check_asset safety-login.html 'data-sw2-release="2.0-simple"'
+          check_asset safety-login.html 'data-sw2-release="2.0-login-only"'
           check_asset sw2/config.mjs 'sw2-license-simple'
+          check_asset sw2/desktop-autosave.mjs 'repairDesktopAutosave'
+          check_asset sw2/app-session.mjs 'normal Supabase login'
+          check_asset sw2/plain-inspection.mjs 'preparePlainInspection'
           check_asset sw2/auth.mjs './client.mjs'
           check_asset sw2/client.mjs './vendor/supabase-client.mjs'
           check_asset sw2/vendor/supabase-client.mjs 'createClient'

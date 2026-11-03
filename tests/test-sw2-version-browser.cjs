@@ -14,8 +14,8 @@ const http=require('http'),fs=require('fs'),path=require('path'),assert=require(
  for(const device of ['iPhone','Mac']){
   const context=await browser.newContext({userAgent:device==='iPhone'?'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'});
   const page=await context.newPage();
-  await page.route('**/sw2/licensing.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export async function loadPrivateApp(){return '<html><head></head><body data-sw2-app-gate>SW2ReportExport.shareSnapshot Inspection</body></html>'};export function selectModule(){};export async function rememberIdentity(){};export async function offlineIdentity(){return {userId:'test'}};export function forgetApproval(){}` }));
-  await page.route('**/sw2/auth.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export const sw2Client={rpc:async(name,args)=>{window.recorded=(window.recorded||[]).concat(args);return {error:null}}};`}));
+  await page.route('**/sw2/app-session.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export async function loadPrivateApp(){return '<html><head></head><body data-sw2-app-gate>SW2ReportExport.shareSnapshot Inspection</body></html>'};export function selectModule(){};export async function rememberIdentity(){};export async function offlineIdentity(){return {userId:'test'}};export function forgetApproval(){}` }));
+  await page.route('**/sw2/client.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export const sw2Client={rpc:async(name,args)=>{window.recorded=(window.recorded||[]).concat(args);return {error:null}}};`}));
   await page.route('**/sw2/client-version-telemetry.mjs',async r=>{await new Promise(done=>setTimeout(done,200));await r.continue();});
   await page.goto('http://127.0.0.1:'+server.address().port);
   await page.evaluate(async()=>{await(await import('/sw2/launch.mjs')).openLicensedOnsite({userId:'test'},'onsite')});

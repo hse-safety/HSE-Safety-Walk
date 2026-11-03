@@ -17,7 +17,7 @@ with sync_playwright() as p:
  def route(req):
   part=req.request.url.split('https://safetywalk.example/')[1].split('?')[0]
   if part=='sw2/licensing.mjs':
-   return req.fulfill(status=200,content_type='text/javascript',body="export async function forgetApproval(){};export function onApprovalChange(){};export function invalidateApproval(){};")
+   return req.fulfill(status=200,content_type='text/javascript',body="export async function reportDraftStore(){return {read:async()=>null,write:async()=>{},clear:async()=>{}}};export async function forgetApproval(){};export function onApprovalChange(){};export function invalidateApproval(){};")
   if part=='sw2/auth.mjs':
    return req.fulfill(status=200,content_type='text/javascript',body=fake_auth)
   target=(repo/part).resolve()
@@ -51,16 +51,10 @@ with sync_playwright() as p:
   }""")
  saved=downloaded.value
  saved_html=Path(saved.path()).read_text(encoding='utf-8')
- assert 'Edited' not in saved_html, 'Unencrypted inspection data leaked into exported file'
- decrypted=page.evaluate("""async carrier=>{
-   const m=await import('./report-core.mjs');
-   const p=m.readCarrierHtml(carrier);
-   return m.decryptHtml(p,window.__sw2Fake.keys[p.id]);
- }""",saved_html)
- assert '<textarea id="notes">Edited</textarea>' in decrypted, 'Edited data did not survive protected export'
+ assert '<textarea id="notes">Edited</textarea>' in saved_html, 'Edited data did not survive plain HTML export'
+ assert 'sw2-payload' not in saved_html, 'New export is still encrypted'
  page.evaluate('window.__sw2Fake.approved=false;window.dispatchEvent(new Event("online"))')
- page.locator('#viewerScreen').wait_for(state='hidden',timeout=15000)
- assert not page.locator('#inspectionFrame').get_attribute('srcdoc')
+ assert frame.locator('#notes').input_value()=='Edited', 'Legacy renewal interrupted report editing'
  assert not errors,errors
- print('PASS: real viewer authentication, AES-GCM open, editable iframe and revoked-session lock')
+ print('PASS: existing encrypted report opens once and saves an ordinary editable HTML file')
  browser.close()
