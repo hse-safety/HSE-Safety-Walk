@@ -1,4 +1,4 @@
-const NAME='safety-walk-2-licensed-simple-v18-local-start';
+const NAME='safety-walk-2-licensed-simple-v19-quiet-autosave';
 const ROOT=new URL('./',self.location.href);
 const SHELL=new URL('safety-login.html',ROOT).href;
 const LOCAL=['safety-walk-cover.png','icon-192.png','icon-512.png','apple-touch-icon.png','safety-login.html','index.html','manifest.webmanifest','sw2/client.mjs','sw2/config.mjs','sw2/report-core.mjs','sw2/report-viewer-v2.html','sw2/prepare-licensed-module.mjs','sw2/desktop-autosave.mjs','sw2/plain-inspection.mjs','sw2/app-session.mjs','sw2/launch.mjs','sw2/client-version-telemetry.mjs'];
